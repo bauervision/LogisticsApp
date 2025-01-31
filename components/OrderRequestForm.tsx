@@ -13,8 +13,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { FIELD_TYPES } from "@/app/constants";
-import { PRESET_FIELDS } from "@/app/constants";
+import { FIELD_TYPES, PRESET_FIELDS, SHIPPING_FIELDS } from "@/app/constants";
 import Link from "next/link";
 import { handleLinkClick } from "@/app/utils/trackLinkClicks";
 import DatePicker from "react-datepicker";
@@ -42,6 +41,7 @@ const OrderRequestForm = () => {
   const [formValues, setFormValues] = useState<{ [key: string]: any }>({});
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [workflowSteps, setWorkflowSteps] = useState<string[]>([]);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({}); // 🔴 Store validation messages
 
   // Handle workflow selection
   const handleWorkflowChange = (workflowName: string) => {
@@ -72,6 +72,12 @@ const OrderRequestForm = () => {
   // Handle input changes
   const handleInputChange = (field: string, value: any) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
+
+    // Clear error message when the user enters data
+    setErrors((prev) => ({
+      ...prev,
+      [field]: value ? "" : "This field is required.",
+    }));
   };
 
   // Handle Date Picker Changes
@@ -83,6 +89,41 @@ const OrderRequestForm = () => {
     if (!date) return;
     const formattedDate = format(date, formatStr);
     setFormValues((prev) => ({ ...prev, [field]: formattedDate }));
+
+    // Clear error message when a date is selected
+    setErrors((prev) => ({
+      ...prev,
+      [field]: formattedDate ? "" : "This field is required.",
+    }));
+  };
+
+  // Get today's date in the correct format
+  const getFormattedTodayDate = (formatStr: string) => {
+    return format(new Date(), DATE_FORMATS[formatStr] || "yyyy-MM-dd");
+  };
+
+  // On form load, set default values
+  useEffect(() => {
+    setFormValues((prev) => ({
+      ...prev,
+      "Request Created": getFormattedTodayDate("MM-DD-YYYY"),
+    }));
+  }, []);
+
+  // 🔹 **Validation function**
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+    PRESET_FIELDS.forEach((field) => {
+      if (
+        !formValues[field.parameter] ||
+        formValues[field.parameter].trim() === ""
+      ) {
+        newErrors[field.parameter] = "This field is required.";
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0; // ✅ Return true if no errors
   };
 
   // Handle form submission
@@ -92,10 +133,14 @@ const OrderRequestForm = () => {
       console.error("No schema found.");
       return;
     }
-
     if (!currentWorkflowName) {
       console.error("No workflow selected.");
       return;
+    }
+
+    // **Run validation**
+    if (!validateForm()) {
+      return; // 🛑 Stop form submission if validation fails
     }
 
     const newRow = {
@@ -113,126 +158,61 @@ const OrderRequestForm = () => {
     setTimeout(() => setFormSubmitted(false), 3000);
   };
 
-  if (!schema) {
-    return (
-      <p className="text-red-500">
-        Schema is not available. Please set it up first.
-      </p>
-    );
-  }
-
-  // Ensure DATE fields in PRESET_FIELDS render DatePicker correctly
-  const isDateField = (field: { type: string }) =>
-    field.type.toUpperCase() === FIELD_TYPES.DATE.toUpperCase();
-
-  const getDateFormat = (field: { format?: string }) =>
-    DATE_FORMATS[field.format ?? "YYYY-MM-DD"];
-
-  // Get today's date in the correct format
-  const getFormattedTodayDate = (formatStr: string) => {
-    return format(new Date(), DATE_FORMATS[formatStr] || "yyyy-MM-dd");
-  };
-
-  // On form load, set default values
-  useEffect(() => {
-    setFormValues((prev) => ({
-      ...prev,
-      "Request Created": getFormattedTodayDate("MM-DD-YYYY"), // ✅ Match PRESET_FIELDS format
-    }));
-  }, []);
-
   return (
     <div className="p-6 bg-white shadow-md rounded-md">
       <h2 className="text-lg font-bold mb-4">Create New Order Request</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Workflow Selector */}
-        {savedWorkflows.length > 0 ? (
-          <div className="space-y-2">
-            <Label htmlFor="workflow" className="font-medium text-sm">
-              Select Workflow
-            </Label>
-            <Select
-              onValueChange={handleWorkflowChange}
-              value={currentWorkflowName || ""}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a workflow" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="" disabled>
-                  Select a Workflow
+        <div>
+          <Label htmlFor="workflow" className="font-medium text-sm">
+            Select Workflow
+          </Label>
+          <Select
+            onValueChange={handleWorkflowChange}
+            value={currentWorkflowName || undefined}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a workflow" />
+            </SelectTrigger>
+            <SelectContent>
+              {savedWorkflows.length === 0 ? (
+                <SelectItem disabled value="no-workflows">
+                  No workflows available
                 </SelectItem>
-                {savedWorkflows.map((workflowName) => (
+              ) : (
+                savedWorkflows.map((workflowName) => (
                   <SelectItem key={workflowName} value={workflowName}>
                     {workflowName}
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {workflowSteps.length > 0 && (
-              <div className="mt-4 p-4 bg-gray-100 rounded-md">
-                <h3 className="font-medium text-sm mb-2">
-                  Steps in Selected Workflow:
-                </h3>
-                <ul className="list-disc pl-5">
-                  {workflowSteps.map((step, index) => (
-                    <li key={index} className="text-sm text-gray-700">
-                      {step}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        ) : (
-          <Link
-            href="/request-tracker/workflow"
-            passHref
-            onClick={() => handleLinkClick("/request-tracker/workflow")}
-          >
-            <Button
-              asChild
-              className="bg-blue-800 text-white"
-              variant="outline"
-            >
-              <p>Workflows not available, set one up first.</p>
-            </Button>
-          </Link>
-        )}
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Request Information */}
-        <div>
-          <h3 className="text-lg font-semibold mb-3">Request Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-md">
-            {/* Core Fields */}
-            {PRESET_FIELDS.map((field) => (
-              <div key={field.id} className="space-y-2">
-                <Label
-                  htmlFor={field.parameter}
-                  className="font-medium text-sm"
-                >
-                  {field.parameter}
-                </Label>
-
-                {/* ✅ Read-only input for "Request Created" */}
-                {field.parameter === "Request Created" ? (
-                  <Input
-                    type="text"
-                    id={field.parameter}
-                    value={formValues[field.parameter]}
-                    readOnly
-                    className="w-full border rounded-md px-2 py-2 text-sm bg-gray-100 cursor-not-allowed"
-                  />
-                ) : field.type.toUpperCase() ===
-                  FIELD_TYPES.DATE.toUpperCase() ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-md">
+          {PRESET_FIELDS.map((field) => (
+            <div key={field.id} className="space-y-2">
+              <Label htmlFor={field.parameter} className="font-medium text-sm">
+                {field.parameter}
+              </Label>
+              {field.parameter === "Request Created" ? (
+                <Input
+                  type="text"
+                  value={formValues[field.parameter]}
+                  readOnly
+                  className="w-full border rounded-md px-2 py-2 text-sm bg-gray-100 cursor-not-allowed"
+                />
+              ) : field.type.toUpperCase() ===
+                FIELD_TYPES.DATE.toUpperCase() ? (
+                <div className="relative">
                   <DatePicker
                     selected={
-                      formValues[field.parameter] &&
-                      typeof formValues[field.parameter] === "string"
+                      formValues[field.parameter]
                         ? parse(
                             formValues[field.parameter],
-                            DATE_FORMATS[field.format ?? "YYYY-MM-DD"], // ✅ Ensure valid format
+                            DATE_FORMATS[field.format ?? "YYYY-MM-DD"],
                             new Date()
                           )
                         : null
@@ -241,23 +221,50 @@ const OrderRequestForm = () => {
                       handleDateChange(
                         field.parameter,
                         date,
-                        DATE_FORMATS[field.format ?? "YYYY-MM-DD"] // ✅ Default format fallback
+                        DATE_FORMATS[field.format ?? "YYYY-MM-DD"]
                       )
                     }
-                    dateFormat={DATE_FORMATS[field.format ?? "YYYY-MM-DD"]} // ✅ Use correct format
+                    dateFormat={DATE_FORMATS[field.format ?? "YYYY-MM-DD"]}
                     className="w-full border rounded-md px-2 py-2 text-sm"
                   />
-                ) : (
-                  <Input
-                    type="text"
-                    id={field.parameter}
-                    value={formValues[field.parameter] || ""}
-                    onChange={(e) =>
-                      handleInputChange(field.parameter, e.target.value)
-                    }
-                    placeholder={`Enter ${field.parameter}`}
-                  />
-                )}
+                </div>
+              ) : (
+                <Input
+                  type="text"
+                  value={formValues[field.parameter] || ""}
+                  onChange={(e) =>
+                    handleInputChange(field.parameter, e.target.value)
+                  }
+                />
+              )}
+              {errors[field.parameter] && (
+                <p className="text-red-500 text-xs">
+                  {errors[field.parameter]}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Shipping Details */}
+        <div className="bg-gray-50 p-4 rounded-md">
+          <h3 className="text-lg font-semibold mb-3">Shipping Details</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {SHIPPING_FIELDS.map((field) => (
+              <div key={field.id} className="space-y-2">
+                <Label
+                  htmlFor={field.parameter}
+                  className="font-medium text-sm"
+                >
+                  {field.parameter}
+                </Label>
+                <Input
+                  type="text"
+                  value={formValues[field.parameter] || ""}
+                  onChange={(e) =>
+                    handleInputChange(field.parameter, e.target.value)
+                  }
+                />
               </div>
             ))}
           </div>
@@ -265,10 +272,12 @@ const OrderRequestForm = () => {
 
         {/* User-Generated Fields */}
         <div>
-          <h3 className="text-lg font-semibold mb-3">Additional Details</h3>
+          <h3 className="text-lg font-semibold mb-3">
+            Customer Specific Details
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-md">
             {schema
-              .filter((field) => field.parameter !== "Request Status")
+              ?.filter((field) => field.parameter !== "Request Status") // Hide internal field
               .map((field) => (
                 <div key={field.id} className="space-y-2">
                   <Label
@@ -277,28 +286,32 @@ const OrderRequestForm = () => {
                   >
                     {field.parameter}
                   </Label>
+
+                  {/* ✅ Wrap DatePicker in a div to position it properly below the label */}
                   {field.type === FIELD_TYPES.DATE ? (
-                    <DatePicker
-                      selected={
-                        formValues[field.parameter] &&
-                        typeof formValues[field.parameter] === "string"
-                          ? parse(
-                              formValues[field.parameter],
-                              DATE_FORMATS[field.format ?? "YYYY-MM-DD"],
-                              new Date()
-                            )
-                          : null
-                      }
-                      onChange={(date) =>
-                        handleDateChange(
-                          field.parameter,
-                          date,
-                          DATE_FORMATS[field.format ?? "YYYY-MM-DD"]
-                        )
-                      }
-                      dateFormat={DATE_FORMATS[field.format ?? "YYYY-MM-DD"]}
-                      className="w-full border rounded-md px-2 py-2 text-sm"
-                    />
+                    <div className="relative">
+                      <DatePicker
+                        selected={
+                          formValues[field.parameter] &&
+                          typeof formValues[field.parameter] === "string"
+                            ? parse(
+                                formValues[field.parameter],
+                                DATE_FORMATS[field.format ?? "YYYY-MM-DD"],
+                                new Date()
+                              )
+                            : null
+                        }
+                        onChange={(date) =>
+                          handleDateChange(
+                            field.parameter,
+                            date,
+                            DATE_FORMATS[field.format ?? "YYYY-MM-DD"]
+                          )
+                        }
+                        dateFormat={DATE_FORMATS[field.format ?? "YYYY-MM-DD"]}
+                        className="w-full border rounded-md px-2 py-2 text-sm"
+                      />
+                    </div>
                   ) : (
                     <Input
                       type="text"
@@ -315,7 +328,11 @@ const OrderRequestForm = () => {
           </div>
         </div>
 
-        <Button type="submit" className="w-full">
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={Object.keys(errors).length > 0}
+        >
           Submit
         </Button>
       </form>

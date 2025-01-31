@@ -19,5 +19,15 @@ export const PRESET_FIELDS = [
     parameter: "Requested Award Date",
     format: "MM-DD-YYYY",
   },
-  { id: 7, type: "TEXT", parameter: "Shipping Details" },
+];
+
+export const SHIPPING_FIELDS = [
+  { id: "customerPOCName", parameter: "Customer POC Name", type: "TEXT" },
+  { id: "customerPOCEmail", parameter: "Customer POC Email", type: "TEXT" },
+  {
+    id: "attentionTo",
+    parameter: "Attention To ( If different )",
+    type: "TEXT",
+  },
+  { id: "shippingAddress", parameter: "Shipping Address", type: "TEXT" },
 ];
