@@ -41,7 +41,7 @@ const OrderRequestForm = () => {
   const [formValues, setFormValues] = useState<{ [key: string]: any }>({});
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [workflowSteps, setWorkflowSteps] = useState<string[]>([]);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({}); // 🔴 Store validation messages
+  const [errors, setErrors] = useState<{ [key: string]: boolean }>({}); // Store validation messages
 
   // Handle workflow selection
   const handleWorkflowChange = (workflowName: string) => {
@@ -76,7 +76,7 @@ const OrderRequestForm = () => {
     // Clear error message when the user enters data
     setErrors((prev) => ({
       ...prev,
-      [field]: value ? "" : "This field is required.",
+      [field]: value ? false : true,
     }));
   };
 
@@ -93,7 +93,7 @@ const OrderRequestForm = () => {
     // Clear error message when a date is selected
     setErrors((prev) => ({
       ...prev,
-      [field]: formattedDate ? "" : "This field is required.",
+      [field]: formattedDate ? false : true,
     }));
   };
 
@@ -112,15 +112,24 @@ const OrderRequestForm = () => {
 
   // 🔹 **Validation function**
   const validateForm = () => {
-    const newErrors: { [key: string]: string } = {};
-    PRESET_FIELDS.forEach((field) => {
-      if (
-        !formValues[field.parameter] ||
-        formValues[field.parameter].trim() === ""
-      ) {
-        newErrors[field.parameter] = "This field is required.";
+    const newErrors: { [key: string]: boolean } = {};
+
+    // Validate workflow selection
+    if (!currentWorkflowName) {
+      newErrors.workflow = true;
+    }
+
+    // Validate all required fields
+    [...PRESET_FIELDS, ...SHIPPING_FIELDS, ...(schema || [])].forEach(
+      (field) => {
+        if (
+          !formValues[field.parameter] ||
+          formValues[field.parameter].trim() === ""
+        ) {
+          newErrors[field.parameter] = true;
+        }
       }
-    });
+    );
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0; // ✅ Return true if no errors
@@ -129,18 +138,8 @@ const OrderRequestForm = () => {
   // Handle form submission
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!schema) {
-      console.error("No schema found.");
-      return;
-    }
-    if (!currentWorkflowName) {
-      console.error("No workflow selected.");
-      return;
-    }
-
-    // **Run validation**
     if (!validateForm()) {
-      return; // 🛑 Stop form submission if validation fails
+      return;
     }
 
     const newRow = {
@@ -166,12 +165,19 @@ const OrderRequestForm = () => {
         <div>
           <Label htmlFor="workflow" className="font-medium text-sm">
             Select Workflow
+            {errors.workflow && (
+              <span className="text-red-500 text-xs ml-2">* Required</span>
+            )}
           </Label>
           <Select
             onValueChange={handleWorkflowChange}
             value={currentWorkflowName || undefined}
           >
-            <SelectTrigger>
+            <SelectTrigger
+              className={`w-full ${
+                errors.workflow ? "border-red-500" : "border-gray-300"
+              }`}
+            >
               <SelectValue placeholder="Select a workflow" />
             </SelectTrigger>
             <SelectContent>
@@ -196,6 +202,9 @@ const OrderRequestForm = () => {
             <div key={field.id} className="space-y-2">
               <Label htmlFor={field.parameter} className="font-medium text-sm">
                 {field.parameter}
+                {errors[field.parameter] && (
+                  <span className="text-red-500 text-xs ml-2">* Required</span>
+                )}
               </Label>
               {field.parameter === "Request Created" ? (
                 <Input
@@ -237,11 +246,6 @@ const OrderRequestForm = () => {
                   }
                 />
               )}
-              {errors[field.parameter] && (
-                <p className="text-red-500 text-xs">
-                  {errors[field.parameter]}
-                </p>
-              )}
             </div>
           ))}
         </div>
@@ -257,6 +261,11 @@ const OrderRequestForm = () => {
                   className="font-medium text-sm"
                 >
                   {field.parameter}
+                  {errors[field.parameter] && (
+                    <span className="text-red-500 text-xs ml-2">
+                      * Required
+                    </span>
+                  )}
                 </Label>
                 <Input
                   type="text"
@@ -285,6 +294,11 @@ const OrderRequestForm = () => {
                     className="font-medium text-sm"
                   >
                     {field.parameter}
+                    {errors[field.parameter] && (
+                      <span className="text-red-500 text-xs ml-2">
+                        * Required
+                      </span>
+                    )}
                   </Label>
 
                   {/* ✅ Wrap DatePicker in a div to position it properly below the label */}
@@ -331,7 +345,7 @@ const OrderRequestForm = () => {
         <Button
           type="submit"
           className="w-full"
-          disabled={Object.keys(errors).length > 0}
+          // disabled={Object.keys(errors).length > 0}
         >
           Submit
         </Button>
