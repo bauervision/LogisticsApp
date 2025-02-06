@@ -7,7 +7,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { useSchema, SchemaItem } from "@/app/context/SchemaContext";
+import { useSchema } from "@/app/context/SchemaContext";
 
 interface RequestContextType {
   data: Record<string, any>[]; // Match rowData from SchemaContext

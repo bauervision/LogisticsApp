@@ -22,13 +22,6 @@ interface SchemaContentProps {
   ) => void;
 }
 
-const DATE_FORMAT_OPTIONS = [
-  "MM/DD/YYYY",
-  "DD/MM/YYYY",
-  "YYYY-MM-DD",
-  "MMM DD, YYYY",
-];
-
 export const SchemaContent: React.FC<SchemaContentProps> = ({
   list,
   handleDelete,
@@ -44,8 +37,7 @@ export const SchemaContent: React.FC<SchemaContentProps> = ({
     const initialFormats: Record<string, string> = {};
     list.forEach((item) => {
       if (item.type === FIELD_TYPES.DATE && item.format) {
-        // Convert item.id to a string for consistent indexing
-        initialFormats[item.id.toString()] = item.format;
+        initialFormats[item.id] = item.format;
       }
     });
     setSelectedFormats(initialFormats);

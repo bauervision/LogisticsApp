@@ -8,6 +8,22 @@ export const FIELD_TYPES = {
   BOOLEAN: "boolean",
 };
 
+// Date format and field type options
+export const DATE_FORMAT_OPTIONS = [
+  "MM/DD/YYYY",
+  "DD/MM/YYYY",
+  "YYYY-MM-DD",
+  "MMM DD, YYYY",
+];
+
+export const FIELD_TYPES_OPTIONS = [
+  { value: FIELD_TYPES.TEXT, label: "Text" },
+  { value: FIELD_TYPES.NUMBER, label: "Number" },
+  { value: FIELD_TYPES.FLOAT, label: "Float" },
+  { value: FIELD_TYPES.CURRENCY, label: "Currency" },
+  { value: FIELD_TYPES.DATE, label: "Date" },
+  { value: FIELD_TYPES.BOOLEAN, label: "Boolean" },
+];
 export const PRESET_FIELDS = [
   {
     id: "requestCreated",
@@ -20,6 +36,12 @@ export const PRESET_FIELDS = [
     id: "requestNumber",
     type: FIELD_TYPES.NUMBER,
     parameter: "Request Number",
+    isRequired: true,
+  },
+  {
+    id: "requestStatus",
+    type: FIELD_TYPES.TEXT,
+    parameter: "Request Status",
     isRequired: true,
   },
   {

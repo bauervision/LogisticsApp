@@ -19,6 +19,8 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format, parse } from "date-fns";
 import Link from "next/link";
+import RequestToast, { showToast } from "./Requests/RequestToast";
+import { useFetchWithToast } from "@/hooks/fetchWithToast";
 
 const DATE_FORMATS: { [key: string]: string } = {
   "MM/DD/YYYY": "MM/dd/yyyy",
@@ -128,18 +130,19 @@ const OrderRequestForm = () => {
     if (!currentWorkflowName) {
       newErrors.workflow = true;
     }
-
-    // Validate all required fields from PRESET_FIELDS, SHIPPING_FIELDS and Schema
+    console.log("currentWorkflowName..." + currentWorkflowName);
+    // Validate all required fields
     [...(schema || [])].forEach((field) => {
       if (
         !formValues[field.parameter] ||
         formValues[field.parameter].toString().trim() === ""
       ) {
-        // skip request status validation as we will
-        if (field.isRequired) newErrors[field.parameter] = true;
+        // validate field only if required
+        if (field.isRequired && field.parameter != "Request Status")
+          newErrors[field.parameter] = true;
       }
     });
-
+    console.log("newErrors...", newErrors);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -180,11 +183,18 @@ const OrderRequestForm = () => {
     // Reset the form and show submission confirmation temporarily
     setFormValues({});
     setFormSubmitted(true);
+
     setTimeout(() => setFormSubmitted(false), 3000);
+    handleRequestSave();
+  };
+
+  const handleRequestSave = async () => {
+    showToast("New Request Submitted successfully", "success");
   };
 
   return (
     <div className="p-6 bg-white shadow-md rounded-md">
+      <RequestToast />
       <h2 className="text-lg font-bold mb-4">Create New Order Request</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Workflow Selector */}

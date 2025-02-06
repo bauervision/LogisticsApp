@@ -76,24 +76,6 @@ export const SchemaProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, []);
 
-  // Add "Request Status" field to the schema
-  const addRequestStatusField = (currentSchema: Schema | null): Schema => {
-    const requestStatusField: SchemaItem = {
-      id: Date.now(), // Generate a unique ID
-      type: "NUMBER", // Always interpret as a number
-      parameter: "Request Status", // Field name
-    };
-
-    const existingField = currentSchema?.find(
-      (field) => field.parameter === "Request Status"
-    );
-
-    if (!existingField) {
-      return [...(currentSchema || []), requestStatusField];
-    }
-    return currentSchema || [];
-  };
-
   // Generate column definitions from the schema
   const updateColDefs = (newSchema: Schema | null) => {
     if (!newSchema) {
@@ -129,12 +111,11 @@ export const SchemaProvider: React.FC<{ children: ReactNode }> = ({
 
   // Save schema & update colDefs
   const setSchema = (newSchema: Schema | null) => {
-    const updatedSchema = addRequestStatusField(newSchema);
-    setSchemaState(updatedSchema);
+    setSchemaState(newSchema);
 
-    if (updatedSchema) {
-      localStorage.setItem(SCHEMA_STORAGE_KEY, JSON.stringify(updatedSchema));
-      updateColDefs(updatedSchema); // Ensure colDefs are updated
+    if (newSchema) {
+      localStorage.setItem(SCHEMA_STORAGE_KEY, JSON.stringify(newSchema));
+      updateColDefs(newSchema); // Ensure colDefs are updated
     } else {
       localStorage.removeItem(SCHEMA_STORAGE_KEY);
       setColDefsState(null);

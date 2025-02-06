@@ -11,7 +11,13 @@ import { SchemaContent } from "./SchemaContent";
 import { CSVParser } from "./CSVParser";
 import { AGGrid } from "./AGGrid";
 import { useSchema } from "@/app/context/SchemaContext";
-import { FIELD_TYPES, PRESET_FIELDS, SHIPPING_FIELDS } from "@/app/constants";
+import {
+  DATE_FORMAT_OPTIONS,
+  FIELD_TYPES,
+  FIELD_TYPES_OPTIONS,
+  PRESET_FIELDS,
+  SHIPPING_FIELDS,
+} from "@/app/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,23 +27,6 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-
-// Date format and field type options
-const DATE_FORMAT_OPTIONS = [
-  "MM/DD/YYYY",
-  "DD/MM/YYYY",
-  "YYYY-MM-DD",
-  "MMM DD, YYYY",
-];
-
-const FIELD_TYPES_OPTIONS = [
-  { value: FIELD_TYPES.TEXT, label: "Text" },
-  { value: FIELD_TYPES.NUMBER, label: "Number" },
-  { value: FIELD_TYPES.FLOAT, label: "Float" },
-  { value: FIELD_TYPES.CURRENCY, label: "Currency" },
-  { value: FIELD_TYPES.DATE, label: "Date" },
-  { value: FIELD_TYPES.BOOLEAN, label: "Boolean" },
-];
 
 const DataSetup: React.FC = () => {
   const {
