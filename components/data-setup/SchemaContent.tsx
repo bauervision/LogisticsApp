@@ -5,13 +5,7 @@ import { DataField } from "./DataField";
 import { ColDef } from "ag-grid-community";
 import { Button } from "../ui/button";
 import { FIELD_TYPES } from "@/app/constants";
-
-interface SchemaItem {
-  id: number;
-  type: string;
-  parameter: string;
-  format?: string;
-}
+import { SchemaItem } from "@/app/context/SchemaContext";
 
 interface SchemaContentProps {
   currentHeaders?: ColDef[];
@@ -43,14 +37,15 @@ export const SchemaContent: React.FC<SchemaContentProps> = ({
   handleHeaderUpdateParameter,
 }) => {
   const [selectedFormats, setSelectedFormats] = useState<
-    Record<number, string>
+    Record<string, string>
   >({});
 
   useEffect(() => {
-    const initialFormats: Record<number, string> = {};
+    const initialFormats: Record<string, string> = {};
     list.forEach((item) => {
       if (item.type === FIELD_TYPES.DATE && item.format) {
-        initialFormats[item.id] = item.format;
+        // Convert item.id to a string for consistent indexing
+        initialFormats[item.id.toString()] = item.format;
       }
     });
     setSelectedFormats(initialFormats);
@@ -99,7 +94,7 @@ export const SchemaContent: React.FC<SchemaContentProps> = ({
                   <DataField
                     placeholder="Add Parameter"
                     newParameter={item.parameter}
-                    selectedFormat={selectedFormats[item.id] || null}
+                    selectedFormat={selectedFormats[item.id.toString()] || null}
                     handleDateFormatChange={handleDateFormatChange}
                     index={i}
                     setNewValue={setNewValue}

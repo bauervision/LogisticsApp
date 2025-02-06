@@ -11,7 +11,7 @@ import { useWorkflow } from "@/app/context/WorkflowContext";
 
 // Define SchemaItem and other types
 export interface SchemaItem {
-  id: number;
+  id: string | number;
   type: string;
   parameter: string;
   format?: string; // optional property

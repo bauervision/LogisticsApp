@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { ColDef } from "ag-grid-community";
+import { ColDef } from "@/app/context/SchemaContext";
 
 import { SchemaContent } from "./SchemaContent";
 import { CSVParser } from "./CSVParser";
 import { AGGrid } from "./AGGrid";
 import { useSchema } from "@/app/context/SchemaContext";
-import { FIELD_TYPES } from "@/app/constants";
+import { FIELD_TYPES, PRESET_FIELDS, SHIPPING_FIELDS } from "@/app/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -55,6 +55,34 @@ const DataSetup: React.FC = () => {
   const [mode, setMode] = useState<"csv" | "manual">("csv");
   const [manualSchema, setManualSchema] = useState<SchemaItem[]>([]);
 
+  // When saving a manual schema, merge in the preset and shipping fields.
+  const handleSaveManualSchema = () => {
+    // Create a complete schema that includes:
+    // 1. PRESET_FIELDS
+    // 2. SHIPPING_FIELDS
+    // 3. The user-defined fields (manualSchema)
+    const completeSchema = [
+      ...PRESET_FIELDS,
+      ...SHIPPING_FIELDS,
+      ...manualSchema,
+    ];
+    setSchema(completeSchema);
+
+    // Optionally, you can also update your AGGrid column definitions here.
+    // For example:
+    const completeColDefs = completeSchema.map((field): ColDef => {
+      const parameter: string = (field.parameter || "") as string;
+      return {
+        headerName: parameter,
+        field: parameter,
+      };
+    }) as unknown as ColDef[];
+
+    setColDefs(completeColDefs);
+
+    alert("Schema saved successfully!");
+  };
+
   const handleAddField = () => {
     const newField: SchemaItem = {
       id: Date.now(),
@@ -80,22 +108,15 @@ const DataSetup: React.FC = () => {
     );
   };
 
-  const handleSaveManualSchema = () => {
-    setSchema(manualSchema);
-
-    alert("Schema saved successfully!");
-  };
-
   const handleModeChange = (newMode: "csv" | "manual") => {
     if (newMode === "csv") {
       // Clear the manual schema and reset inputs
-      setManualSchema([]); // Clear manualSchema state
+      setManualSchema([]);
     }
-    setMode(newMode); // Switch mode
+    setMode(newMode);
   };
 
   useEffect(() => {
-    // Log schema when component mounts or updates
     console.log("Current Schema:", schema);
   }, [schema]);
 
@@ -133,7 +154,7 @@ const DataSetup: React.FC = () => {
             <section className="bg-white p-6 shadow rounded-lg">
               <h3 className="text-lg font-semibold mb-4">Define Schema</h3>
               <div className="space-y-4">
-                {manualSchema.map((field, index) => (
+                {manualSchema.map((field) => (
                   <div
                     key={field.id}
                     className="flex items-center gap-4 w-full"
@@ -229,7 +250,15 @@ const DataSetup: React.FC = () => {
             <section className="bg-white p-6 shadow rounded-lg">
               <CSVParser
                 saveParsedData={(rows, data) => setRowData(data)}
-                setHeaders={(rows, schemaArray) => setSchema(schemaArray)}
+                setHeaders={(rows, schemaArray) => {
+                  // When CSV is used, you can merge the CSV-based schema with the preset fields.
+                  const completeSchema = [
+                    ...PRESET_FIELDS,
+                    ...SHIPPING_FIELDS,
+                    ...schemaArray,
+                  ];
+                  setSchema(completeSchema);
+                }}
                 handleDataCreation={setRowData}
                 setSchema={setSchema}
               />
@@ -242,12 +271,12 @@ const DataSetup: React.FC = () => {
                   <SchemaContent
                     currentHeaders={colDefs || undefined}
                     list={
-                      schema?.filter(
+                      schema.filter(
                         (item) => item.parameter !== "Request Status"
                       ) || []
                     }
                     handleDelete={(id) =>
-                      setSchema(schema?.filter((item) => item.id !== id) || [])
+                      setSchema(schema.filter((item) => item.id !== id))
                     }
                     handleSavingDataset={() => alert("Schema saved!")}
                     handleHeaderUpdateType={() => {}}

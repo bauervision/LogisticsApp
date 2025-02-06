@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useSchema } from "@/app/context/SchemaContext";
 import { useWorkflow } from "@/app/context/WorkflowContext";
+import { useRequestContext } from "@/app/context/DataContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -14,8 +15,6 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { FIELD_TYPES, PRESET_FIELDS, SHIPPING_FIELDS } from "@/app/constants";
-import Link from "next/link";
-import { handleLinkClick } from "@/app/utils/trackLinkClicks";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format, parse } from "date-fns";
@@ -29,7 +28,7 @@ const DATE_FORMATS: { [key: string]: string } = {
 };
 
 const OrderRequestForm = () => {
-  const { schema, rowData, setRowData } = useSchema();
+  const { schema, rowData } = useSchema();
   const {
     state,
     savedWorkflows,
@@ -37,11 +36,12 @@ const OrderRequestForm = () => {
     setCurrentWorkflowName,
     loadWorkflow,
   } = useWorkflow();
+  const { addRow } = useRequestContext();
 
   const [formValues, setFormValues] = useState<{ [key: string]: any }>({});
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [workflowSteps, setWorkflowSteps] = useState<string[]>([]);
-  const [errors, setErrors] = useState<{ [key: string]: boolean }>({}); // Store validation messages
+  const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
 
   // Handle workflow selection
   const handleWorkflowChange = (workflowName: string) => {
@@ -72,12 +72,8 @@ const OrderRequestForm = () => {
   // Handle input changes
   const handleInputChange = (field: string, value: any) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
-
-    // Clear error message when the user enters data
-    setErrors((prev) => ({
-      ...prev,
-      [field]: value ? false : true,
-    }));
+    // Clear error if user has provided a value.
+    setErrors((prev) => ({ ...prev, [field]: !value }));
   };
 
   // Handle Date Picker Changes
@@ -89,12 +85,7 @@ const OrderRequestForm = () => {
     if (!date) return;
     const formattedDate = format(date, formatStr);
     setFormValues((prev) => ({ ...prev, [field]: formattedDate }));
-
-    // Clear error message when a date is selected
-    setErrors((prev) => ({
-      ...prev,
-      [field]: formattedDate ? false : true,
-    }));
+    setErrors((prev) => ({ ...prev, [field]: !formattedDate }));
   };
 
   // Get today's date in the correct format
@@ -102,7 +93,7 @@ const OrderRequestForm = () => {
     return format(new Date(), DATE_FORMATS[formatStr] || "yyyy-MM-dd");
   };
 
-  // On form load, set default values
+  // On form load, set default values (for example, Request Created)
   useEffect(() => {
     setFormValues((prev) => ({
       ...prev,
@@ -110,7 +101,7 @@ const OrderRequestForm = () => {
     }));
   }, []);
 
-  // 🔹 **Validation function**
+  // Validate required fields
   const validateForm = () => {
     const newErrors: { [key: string]: boolean } = {};
 
@@ -119,20 +110,22 @@ const OrderRequestForm = () => {
       newErrors.workflow = true;
     }
 
-    // Validate all required fields
+    // Validate all required fields from PRESET_FIELDS, SHIPPING_FIELDS and Schema
     [...PRESET_FIELDS, ...SHIPPING_FIELDS, ...(schema || [])].forEach(
       (field) => {
         if (
           !formValues[field.parameter] ||
-          formValues[field.parameter].trim() === ""
+          formValues[field.parameter].toString().trim() === ""
         ) {
-          newErrors[field.parameter] = true;
+          // skip request status validation as we will
+          if (field.parameter != "Request Status")
+            newErrors[field.parameter] = true;
         }
       }
     );
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0; // ✅ Return true if no errors
+    return Object.keys(newErrors).length === 0;
   };
 
   // Handle form submission
@@ -142,16 +135,31 @@ const OrderRequestForm = () => {
       return;
     }
 
+    // Determine the first step of the workflow.
+    let firstStep = "";
+    if (workflowSteps.length > 0) {
+      firstStep = workflowSteps[0];
+    } else if (state.rootItem && state.items[state.rootItem]) {
+      firstStep = state.items[state.rootItem].name;
+    }
+
+    // Create new request data including all field groups
     const newRow = {
       ...formValues,
       id: rowData ? rowData.length + 1 : 1,
-      workflow: currentWorkflowName,
+      workflow: {
+        name: currentWorkflowName,
+        currentStep: firstStep,
+      },
     };
 
-    if (setRowData) {
-      setRowData([...(rowData || []), newRow]);
-    }
+    // Log the final request data for verification
+    console.log("Final Request Data:", newRow);
 
+    // Use the data context to store the new request
+    addRow(newRow);
+
+    // Reset the form and show submission confirmation temporarily
     setFormValues({});
     setFormSubmitted(true);
     setTimeout(() => setFormSubmitted(false), 3000);
@@ -196,7 +204,7 @@ const OrderRequestForm = () => {
           </Select>
         </div>
 
-        {/* Request Information */}
+        {/* Request Information (PRESET_FIELDS) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-md">
           {PRESET_FIELDS.map((field) => (
             <div key={field.id} className="space-y-2">
@@ -209,7 +217,7 @@ const OrderRequestForm = () => {
               {field.parameter === "Request Created" ? (
                 <Input
                   type="text"
-                  value={formValues[field.parameter]}
+                  value={formValues[field.parameter] ?? ""}
                   readOnly
                   className="w-full border rounded-md px-2 py-2 text-sm bg-gray-100 cursor-not-allowed"
                 />
@@ -240,7 +248,7 @@ const OrderRequestForm = () => {
               ) : (
                 <Input
                   type="text"
-                  value={formValues[field.parameter] || ""}
+                  value={formValues[field.parameter] ?? ""}
                   onChange={(e) =>
                     handleInputChange(field.parameter, e.target.value)
                   }
@@ -250,7 +258,7 @@ const OrderRequestForm = () => {
           ))}
         </div>
 
-        {/* Shipping Details */}
+        {/* Shipping Details (SHIPPING_FIELDS) */}
         <div className="bg-gray-50 p-4 rounded-md">
           <h3 className="text-lg font-semibold mb-3">Shipping Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -269,7 +277,7 @@ const OrderRequestForm = () => {
                 </Label>
                 <Input
                   type="text"
-                  value={formValues[field.parameter] || ""}
+                  value={formValues[field.parameter] ?? ""}
                   onChange={(e) =>
                     handleInputChange(field.parameter, e.target.value)
                   }
@@ -279,14 +287,14 @@ const OrderRequestForm = () => {
           </div>
         </div>
 
-        {/* User-Generated Fields */}
+        {/* Customer Specific Details (Schema Fields) */}
         <div>
           <h3 className="text-lg font-semibold mb-3">
             Customer Specific Details
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-md">
             {schema
-              ?.filter((field) => field.parameter !== "Request Status") // Hide internal field
+              ?.filter((field) => field.parameter !== "Request Status")
               .map((field) => (
                 <div key={field.id} className="space-y-2">
                   <Label
@@ -300,8 +308,6 @@ const OrderRequestForm = () => {
                       </span>
                     )}
                   </Label>
-
-                  {/* ✅ Wrap DatePicker in a div to position it properly below the label */}
                   {field.type === FIELD_TYPES.DATE ? (
                     <div className="relative">
                       <DatePicker
@@ -330,7 +336,7 @@ const OrderRequestForm = () => {
                     <Input
                       type="text"
                       id={field.parameter}
-                      value={formValues[field.parameter] || ""}
+                      value={formValues[field.parameter] ?? ""}
                       onChange={(e) =>
                         handleInputChange(field.parameter, e.target.value)
                       }
@@ -342,11 +348,7 @@ const OrderRequestForm = () => {
           </div>
         </div>
 
-        <Button
-          type="submit"
-          className="w-full"
-          // disabled={Object.keys(errors).length > 0}
-        >
+        <Button type="submit" className="w-full">
           Submit
         </Button>
       </form>
