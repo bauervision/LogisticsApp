@@ -204,89 +204,6 @@ const OrderRequestForm = () => {
           </Select>
         </div>
 
-        {/* Request Information (PRESET_FIELDS) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-md">
-          {PRESET_FIELDS.map((field) => (
-            <div key={field.id} className="space-y-2">
-              <Label htmlFor={field.parameter} className="font-medium text-sm">
-                {field.parameter}
-                {errors[field.parameter] && (
-                  <span className="text-red-500 text-xs ml-2">* Required</span>
-                )}
-              </Label>
-              {field.parameter === "Request Created" ? (
-                <Input
-                  type="text"
-                  value={formValues[field.parameter] ?? ""}
-                  readOnly
-                  className="w-full border rounded-md px-2 py-2 text-sm bg-gray-100 cursor-not-allowed"
-                />
-              ) : field.type.toUpperCase() ===
-                FIELD_TYPES.DATE.toUpperCase() ? (
-                <div className="relative">
-                  <DatePicker
-                    selected={
-                      formValues[field.parameter]
-                        ? parse(
-                            formValues[field.parameter],
-                            DATE_FORMATS[field.format ?? "YYYY-MM-DD"],
-                            new Date()
-                          )
-                        : null
-                    }
-                    onChange={(date) =>
-                      handleDateChange(
-                        field.parameter,
-                        date,
-                        DATE_FORMATS[field.format ?? "YYYY-MM-DD"]
-                      )
-                    }
-                    dateFormat={DATE_FORMATS[field.format ?? "YYYY-MM-DD"]}
-                    className="w-full border rounded-md px-2 py-2 text-sm"
-                  />
-                </div>
-              ) : (
-                <Input
-                  type="text"
-                  value={formValues[field.parameter] ?? ""}
-                  onChange={(e) =>
-                    handleInputChange(field.parameter, e.target.value)
-                  }
-                />
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Shipping Details (SHIPPING_FIELDS) */}
-        <div className="bg-gray-50 p-4 rounded-md">
-          <h3 className="text-lg font-semibold mb-3">Shipping Details</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {SHIPPING_FIELDS.map((field) => (
-              <div key={field.id} className="space-y-2">
-                <Label
-                  htmlFor={field.parameter}
-                  className="font-medium text-sm"
-                >
-                  {field.parameter}
-                  {errors[field.parameter] && (
-                    <span className="text-red-500 text-xs ml-2">
-                      * Required
-                    </span>
-                  )}
-                </Label>
-                <Input
-                  type="text"
-                  value={formValues[field.parameter] ?? ""}
-                  onChange={(e) =>
-                    handleInputChange(field.parameter, e.target.value)
-                  }
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Customer Specific Details (Schema Fields) */}
         <div>
           <h3 className="text-lg font-semibold mb-3">
@@ -308,12 +225,19 @@ const OrderRequestForm = () => {
                       </span>
                     )}
                   </Label>
-                  {field.type === FIELD_TYPES.DATE ? (
+                  {field.parameter === "Request Created" ? (
+                    <Input
+                      type="text"
+                      value={formValues[field.parameter] ?? ""}
+                      readOnly
+                      className="w-full border rounded-md px-2 py-2 text-sm bg-gray-100 cursor-not-allowed"
+                    />
+                  ) : field.type.toUpperCase() ===
+                    FIELD_TYPES.DATE.toUpperCase() ? (
                     <div className="relative">
                       <DatePicker
                         selected={
-                          formValues[field.parameter] &&
-                          typeof formValues[field.parameter] === "string"
+                          formValues[field.parameter]
                             ? parse(
                                 formValues[field.parameter],
                                 DATE_FORMATS[field.format ?? "YYYY-MM-DD"],
@@ -335,12 +259,10 @@ const OrderRequestForm = () => {
                   ) : (
                     <Input
                       type="text"
-                      id={field.parameter}
                       value={formValues[field.parameter] ?? ""}
                       onChange={(e) =>
                         handleInputChange(field.parameter, e.target.value)
                       }
-                      placeholder={`Enter ${field.parameter}`}
                     />
                   )}
                 </div>
