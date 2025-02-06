@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { ColDef } from "@/app/context/SchemaContext";
+import {
+  ColDef,
+  SchemaItem as ContextSchemaItem,
+  SchemaItem,
+} from "@/app/context/SchemaContext";
 
 import { SchemaContent } from "./SchemaContent";
 import { CSVParser } from "./CSVParser";
@@ -18,6 +22,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 
+// Date format and field type options
 const DATE_FORMAT_OPTIONS = [
   "MM/DD/YYYY",
   "DD/MM/YYYY",
@@ -34,13 +39,6 @@ const FIELD_TYPES_OPTIONS = [
   { value: FIELD_TYPES.BOOLEAN, label: "Boolean" },
 ];
 
-interface SchemaItem {
-  id: number;
-  type: string;
-  parameter: string;
-  format?: string;
-}
-
 const DataSetup: React.FC = () => {
   const {
     schema,
@@ -53,31 +51,25 @@ const DataSetup: React.FC = () => {
   } = useSchema();
 
   const [mode, setMode] = useState<"csv" | "manual">("csv");
-  const [manualSchema, setManualSchema] = useState<SchemaItem[]>([]);
 
-  // When saving a manual schema, merge in the preset and shipping fields.
+  // Prepopulate manual schema with built‑in fields (marking them as readOnly)
+  const [manualSchema, setManualSchema] = useState<SchemaItem[]>([
+    ...PRESET_FIELDS.map((field) => ({ ...field, readOnly: true })),
+    ...SHIPPING_FIELDS.map((field) => ({ ...field, readOnly: true })),
+  ]);
+
+  // When saving in manual mode, simply use the manual schema
   const handleSaveManualSchema = () => {
-    // Create a complete schema that includes:
-    // 1. PRESET_FIELDS
-    // 2. SHIPPING_FIELDS
-    // 3. The user-defined fields (manualSchema)
-    const completeSchema = [
-      ...PRESET_FIELDS,
-      ...SHIPPING_FIELDS,
-      ...manualSchema,
-    ];
-    setSchema(completeSchema);
+    setSchema(manualSchema);
 
-    // Optionally, you can also update your AGGrid column definitions here.
-    // For example:
-    const completeColDefs = completeSchema.map((field): ColDef => {
-      const parameter: string = (field.parameter || "") as string;
+    // Update AGGrid column definitions using the manual schema.
+    const completeColDefs = manualSchema.map((field): ColDef => {
+      const parameter: string = field.parameter || "";
       return {
         headerName: parameter,
         field: parameter,
       };
-    }) as unknown as ColDef[];
-
+    });
     setColDefs(completeColDefs);
 
     alert("Schema saved successfully!");
@@ -86,39 +78,44 @@ const DataSetup: React.FC = () => {
   const handleAddField = () => {
     const newField: SchemaItem = {
       id: Date.now(),
-      type: FIELD_TYPES.TEXT, // Default type
+      type: FIELD_TYPES.TEXT, // Default type for new fields
       parameter: "", // Default empty parameter
     };
     setManualSchema((prev) => [...prev, newField]);
   };
 
-  const handleRemoveField = (id: number) => {
-    setManualSchema((prev) => prev.filter((field) => field.id !== id));
+  const handleRemoveField = (id: string) => {
+    setManualSchema((prev) =>
+      prev.filter((field) => field.id.toString() !== id)
+    );
   };
 
   const handleUpdateField = (
-    id: number,
+    id: string,
     key: keyof SchemaItem,
     value: string
   ) => {
     setManualSchema((prev) =>
       prev.map((field) =>
-        field.id === id ? { ...field, [key]: value } : field
+        field.id.toString() === id ? { ...field, [key]: value } : field
       )
     );
   };
 
+  // When switching modes, we preserve manual schema so built‑in fields remain.
   const handleModeChange = (newMode: "csv" | "manual") => {
-    if (newMode === "csv") {
-      // Clear the manual schema and reset inputs
-      setManualSchema([]);
-    }
+    // Optionally clear manualSchema when switching to CSV mode:
+    // if (newMode === "csv") setManualSchema([]);
     setMode(newMode);
   };
 
   useEffect(() => {
     console.log("Current Schema:", schema);
   }, [schema]);
+
+  // Separate built‑in fields from additional (user-added) fields.
+  const builtInFields = manualSchema.filter((field) => field.readOnly);
+  const additionalFields = manualSchema.filter((field) => !field.readOnly);
 
   return (
     <div className="bg-gray-100 w-full flex flex-col h-full">
@@ -153,46 +150,119 @@ const DataSetup: React.FC = () => {
           <>
             <section className="bg-white p-6 shadow rounded-lg">
               <h3 className="text-lg font-semibold mb-4">Define Schema</h3>
-              <div className="space-y-4">
-                {manualSchema.map((field) => (
+              <h4 className="text-sm  mb-4">
+                These are default Catena Request fields and cannot be altered.
+                They are presented here for your awareness. Feel free to add any
+                custom fields in the Additional Details section.
+              </h4>
+
+              {/* Fieldset for built‑in (read-only) fields */}
+              <fieldset className="mb-4 border p-4">
+                <legend className="px-2 font-semibold">Built-in Fields</legend>
+                {builtInFields.map((field) => (
                   <div
                     key={field.id}
-                    className="flex items-center gap-4 w-full"
+                    className="flex items-center gap-4 w-full mb-2"
                   >
-                    {/* Parameter Name Input */}
+                    {/* Parameter Name Input (read-only) */}
+                    <Input
+                      className="flex-grow"
+                      placeholder="Field Name"
+                      value={field.parameter}
+                      readOnly
+                    />
+
+                    {/* Type Dropdown (disabled) */}
+                    <Select disabled value={field.type}>
+                      <SelectTrigger className="w-1/4">
+                        <SelectValue placeholder="Select Type">
+                          {FIELD_TYPES_OPTIONS.find(
+                            (option) => option.value === field.type
+                          )?.label || "Select Type"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FIELD_TYPES_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Conditional Date Format Dropdown (disabled) */}
+                    {field.type === FIELD_TYPES.DATE && (
+                      <div className="ml-3">
+                        <select
+                          className="form-select"
+                          value={field.format || ""}
+                          disabled
+                        >
+                          <option value="" disabled>
+                            Select Date Format
+                          </option>
+                          {DATE_FORMAT_OPTIONS.map((format) => (
+                            <option key={format} value={format}>
+                              {format}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* No delete button for built-in fields */}
+                  </div>
+                ))}
+              </fieldset>
+
+              {/* Fieldset for additional fields */}
+              <fieldset className="mb-4 border p-4">
+                <legend className="px-2 font-semibold">
+                  Additional Fields
+                </legend>
+                {additionalFields.map((field) => (
+                  <div
+                    key={field.id}
+                    className="flex items-center gap-4 w-full mb-2"
+                  >
+                    {/* Parameter Name Input (editable) */}
                     <Input
                       className="flex-grow"
                       placeholder="Field Name"
                       value={field.parameter}
                       onChange={(e) =>
-                        handleUpdateField(field.id, "parameter", e.target.value)
+                        handleUpdateField(
+                          field.id.toString(),
+                          "parameter",
+                          e.target.value
+                        )
                       }
                     />
 
-                    {/* Type Dropdown */}
+                    {/* Type Dropdown (editable) */}
                     <Select
                       onValueChange={(value) =>
-                        handleUpdateField(field.id, "type", value)
+                        handleUpdateField(field.id.toString(), "type", value)
                       }
                       value={field.type}
                     >
                       <SelectTrigger className="w-1/4">
                         <SelectValue placeholder="Select Type">
                           {FIELD_TYPES_OPTIONS.find(
-                            (type) => type.value === field.type
+                            (option) => option.value === field.type
                           )?.label || "Select Type"}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        {FIELD_TYPES_OPTIONS.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
+                        {FIELD_TYPES_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
 
-                    {/* Conditional Date Format Dropdown */}
+                    {/* Conditional Date Format Dropdown (editable) */}
                     {field.type === FIELD_TYPES.DATE && (
                       <div className="ml-3">
                         <select
@@ -200,7 +270,7 @@ const DataSetup: React.FC = () => {
                           value={field.format || ""}
                           onChange={(e) =>
                             handleUpdateField(
-                              field.id,
+                              field.id.toString(),
                               "format",
                               e.target.value
                             )
@@ -218,17 +288,18 @@ const DataSetup: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Delete Button */}
+                    {/* Delete Button for additional fields */}
                     <Button
                       variant="outline"
-                      onClick={() => handleRemoveField(field.id)}
+                      onClick={() => handleRemoveField(field.id.toString())}
                       type="button"
                     >
                       Delete
                     </Button>
                   </div>
                 ))}
-              </div>
+              </fieldset>
+
               <div className="flex gap-4 mt-4">
                 <Button
                   onClick={handleAddField}
@@ -251,7 +322,7 @@ const DataSetup: React.FC = () => {
               <CSVParser
                 saveParsedData={(rows, data) => setRowData(data)}
                 setHeaders={(rows, schemaArray) => {
-                  // When CSV is used, you can merge the CSV-based schema with the preset fields.
+                  // When CSV is used, merge CSV-based schema with preset fields.
                   const completeSchema = [
                     ...PRESET_FIELDS,
                     ...SHIPPING_FIELDS,

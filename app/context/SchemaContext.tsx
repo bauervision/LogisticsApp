@@ -14,7 +14,9 @@ export interface SchemaItem {
   id: string | number;
   type: string;
   parameter: string;
-  format?: string; // optional property
+  format?: string;
+  readOnly?: boolean;
+  isRequired?: boolean;
 }
 
 export type Schema = SchemaItem[];

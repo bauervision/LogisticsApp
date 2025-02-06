@@ -18,6 +18,7 @@ import { FIELD_TYPES, PRESET_FIELDS, SHIPPING_FIELDS } from "@/app/constants";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format, parse } from "date-fns";
+import Link from "next/link";
 
 const DATE_FORMATS: { [key: string]: string } = {
   "MM/DD/YYYY": "MM/dd/yyyy",
@@ -36,7 +37,7 @@ const OrderRequestForm = () => {
     setCurrentWorkflowName,
     loadWorkflow,
   } = useWorkflow();
-  const { addRow } = useRequestContext();
+  const { addRow, data } = useRequestContext(); // Destructure "data" from RequestContext
 
   const [formValues, setFormValues] = useState<{ [key: string]: any }>({});
   const [formSubmitted, setFormSubmitted] = useState(false);
@@ -101,8 +102,26 @@ const OrderRequestForm = () => {
     }));
   }, []);
 
+  // Set the "Request Number" based on the saved orders.
+  useEffect(() => {
+    // If there are saved orders, take the last order's Request Number,
+    // increment it, and pad with leading zeros to 7 digits.
+    const newRequestNumber =
+      data && data.length > 0
+        ? (parseInt(data[data.length - 1]["Request Number"], 10) + 1)
+            .toString()
+            .padStart(7, "0")
+        : "0000001";
+
+    setFormValues((prev) => ({
+      ...prev,
+      "Request Number": newRequestNumber,
+    }));
+  }, [data]);
+
   // Validate required fields
   const validateForm = () => {
+    console.log("Validating...");
     const newErrors: { [key: string]: boolean } = {};
 
     // Validate workflow selection
@@ -111,18 +130,15 @@ const OrderRequestForm = () => {
     }
 
     // Validate all required fields from PRESET_FIELDS, SHIPPING_FIELDS and Schema
-    [...PRESET_FIELDS, ...SHIPPING_FIELDS, ...(schema || [])].forEach(
-      (field) => {
-        if (
-          !formValues[field.parameter] ||
-          formValues[field.parameter].toString().trim() === ""
-        ) {
-          // skip request status validation as we will
-          if (field.parameter != "Request Status")
-            newErrors[field.parameter] = true;
-        }
+    [...(schema || [])].forEach((field) => {
+      if (
+        !formValues[field.parameter] ||
+        formValues[field.parameter].toString().trim() === ""
+      ) {
+        // skip request status validation as we will
+        if (field.isRequired) newErrors[field.parameter] = true;
       }
-    );
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -131,10 +147,12 @@ const OrderRequestForm = () => {
   // Handle form submission
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    console.log("Submitting...");
     if (!validateForm()) {
+      console.log("Failed Validation!");
       return;
     }
-
+    console.log("Passed Valdation...");
     // Determine the first step of the workflow.
     let firstStep = "";
     if (workflowSteps.length > 0) {
@@ -142,7 +160,7 @@ const OrderRequestForm = () => {
     } else if (state.rootItem && state.items[state.rootItem]) {
       firstStep = state.items[state.rootItem].name;
     }
-
+    console.log("First Step = " + firstStep);
     // Create new request data including all field groups
     const newRow = {
       ...formValues,
@@ -177,34 +195,40 @@ const OrderRequestForm = () => {
               <span className="text-red-500 text-xs ml-2">* Required</span>
             )}
           </Label>
-          <Select
-            onValueChange={handleWorkflowChange}
-            value={currentWorkflowName || undefined}
-          >
-            <SelectTrigger
-              className={`w-full ${
-                errors.workflow ? "border-red-500" : "border-gray-300"
-              }`}
+
+          {savedWorkflows.length === 0 ? (
+            <div className="flex flex-col items-start gap-2">
+              <p className="text-red-500 text-xs">No workflows available.</p>
+              <Link href="/request-tracker/workflow" passHref>
+                <Button className="bg-blue-800 text-white">
+                  Create Workflow
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <Select
+              onValueChange={handleWorkflowChange}
+              value={currentWorkflowName || undefined}
             >
-              <SelectValue placeholder="Select a workflow" />
-            </SelectTrigger>
-            <SelectContent>
-              {savedWorkflows.length === 0 ? (
-                <SelectItem disabled value="no-workflows">
-                  No workflows available
-                </SelectItem>
-              ) : (
-                savedWorkflows.map((workflowName) => (
+              <SelectTrigger
+                className={`w-full ${
+                  errors.workflow ? "border-red-500" : "border-gray-300"
+                }`}
+              >
+                <SelectValue placeholder="Select a workflow" />
+              </SelectTrigger>
+              <SelectContent>
+                {savedWorkflows.map((workflowName) => (
                   <SelectItem key={workflowName} value={workflowName}>
                     {workflowName}
                   </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
-        {/* Customer Specific Details (Schema Fields) */}
+        {/* (Schema Fields) */}
         <div>
           <h3 className="text-lg font-semibold mb-3">
             Customer Specific Details
@@ -219,7 +243,7 @@ const OrderRequestForm = () => {
                     className="font-medium text-sm"
                   >
                     {field.parameter}
-                    {errors[field.parameter] && (
+                    {errors[field.parameter] && field.isRequired && (
                       <span className="text-red-500 text-xs ml-2">
                         * Required
                       </span>

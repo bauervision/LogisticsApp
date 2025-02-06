@@ -1,33 +1,77 @@
 // constants.ts
 export const FIELD_TYPES = {
-  TEXT: "string",
-  NUMBER: "int",
+  TEXT: "text",
+  NUMBER: "number",
   FLOAT: "float",
+  CURRENCY: "currency",
   DATE: "date",
-  BOOLEAN: "boolean", // Example: Future type
-  CURRENCY: "currency", // Example: Future type
+  BOOLEAN: "boolean",
 };
+
 export const PRESET_FIELDS = [
-  { id: 1, type: "DATE", parameter: "Request Created", format: "MM-DD-YYYY" },
-  { id: 2, type: "NUMBER", parameter: "Request Number" },
-  { id: 3, type: "NUMBER", parameter: "Contract Number" },
-  { id: 4, type: "TEXT", parameter: "Description" },
-  { id: 5, type: "TEXT", parameter: "Requested Items" },
   {
-    id: 6,
-    type: "DATE",
+    id: "requestCreated",
+    type: FIELD_TYPES.DATE,
+    parameter: "Request Created",
+    format: "MM-DD-YYYY",
+    isRequired: true,
+  },
+  {
+    id: "requestNumber",
+    type: FIELD_TYPES.NUMBER,
+    parameter: "Request Number",
+    isRequired: true,
+  },
+  {
+    id: "contractNumber",
+    type: FIELD_TYPES.NUMBER,
+    parameter: "Contract Number",
+    isRequired: true,
+  },
+  {
+    id: "description",
+    type: FIELD_TYPES.TEXT,
+    parameter: "Description",
+    isRequired: false,
+  },
+  {
+    id: "requestedItems",
+    type: FIELD_TYPES.TEXT,
+    parameter: "Requested Items",
+    isRequired: true,
+  },
+  {
+    id: "requestedAwardDate",
+    type: FIELD_TYPES.DATE,
     parameter: "Requested Award Date",
     format: "MM-DD-YYYY",
+    isRequired: true,
   },
 ];
 
 export const SHIPPING_FIELDS = [
-  { id: "customerPOCName", parameter: "Customer POC Name", type: "TEXT" },
-  { id: "customerPOCEmail", parameter: "Customer POC Email", type: "TEXT" },
+  {
+    id: "customerPOCName",
+    parameter: "Customer POC Name",
+    type: FIELD_TYPES.TEXT,
+    isRequired: true,
+  },
+  {
+    id: "customerPOCEmail",
+    parameter: "Customer POC Email",
+    type: FIELD_TYPES.TEXT,
+    isRequired: true,
+  },
   {
     id: "attentionTo",
     parameter: "Attention To ( If different )",
-    type: "TEXT",
+    type: FIELD_TYPES.TEXT,
+    isRequired: false,
   },
-  { id: "shippingAddress", parameter: "Shipping Address", type: "TEXT" },
+  {
+    id: "shippingAddress",
+    parameter: "Shipping Address",
+    type: FIELD_TYPES.TEXT,
+    isRequired: true,
+  },
 ];
