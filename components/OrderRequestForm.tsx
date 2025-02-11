@@ -102,18 +102,21 @@ const OrderRequestForm = () => {
   useEffect(() => {
     // Initialize nextApprover with an empty string by default
     let nextApprover = "";
+    let currentStatus = "";
 
     // If the workflow is loaded and there's a root item, get the first step.
     if (workflowState.rootItem) {
       const firstStep = workflowState.items[workflowState.rootItem];
-      if (firstStep && firstStep.nextApprover) {
-        nextApprover = firstStep.nextApprover;
+      if (firstStep) {
+        currentStatus = firstStep.currentState;
+        if (firstStep.nextApprover) nextApprover = firstStep.nextApprover;
       }
     }
 
     setFormValues((prev) => ({
       ...prev,
       "Request Creator": user.name,
+      "Request Status": currentStatus,
       "Next Step Approver": nextApprover,
       "Request Created": getFormattedTodayDate("MM-DD-YYYY"),
     }));
