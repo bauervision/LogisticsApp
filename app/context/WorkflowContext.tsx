@@ -11,19 +11,58 @@ import React, {
 } from "react";
 import workflow from "../workflow-engine/workflow";
 
+// Updated interface to include nextApprover
 export interface WorkflowItemState {
   id: string;
   name: string;
   currentState: string;
   children: string[]; // Store child IDs
+  nextApprover?: string; // New property for the Next Approver
 }
 
-interface WorkflowState {
+export interface WorkflowState {
   rootItem?: string; // Root item ID
   items: Record<string, WorkflowItemState>; // Map of item IDs to their states
   workflowKey?: string; // Workflow key
   workflowDescription?: string; // Workflow description
 }
+
+// Define the default template workflow
+export const DEFAULT_WORKFLOW: WorkflowState = {
+  rootItem: "order-received",
+  items: {
+    "order-received": {
+      id: "order-received",
+      name: "Order Received",
+      currentState: "draft",
+      children: ["sourcing"],
+      nextApprover: undefined,
+    },
+    sourcing: {
+      id: "sourcing",
+      name: "Sourcing",
+      currentState: "draft",
+      children: ["purchasing"],
+      nextApprover: undefined,
+    },
+    purchasing: {
+      id: "purchasing",
+      name: "Purchasing",
+      currentState: "draft",
+      children: ["order-complete"],
+      nextApprover: undefined,
+    },
+    "order-complete": {
+      id: "order-complete",
+      name: "Order Complete",
+      currentState: "draft",
+      children: [],
+      nextApprover: undefined,
+    },
+  },
+  workflowKey: "default",
+  workflowDescription: "Default Template Workflow",
+};
 
 interface InitializeAction {
   type: "initialize";
@@ -108,13 +147,11 @@ const WorkflowContext = createContext<WorkflowContextType | undefined>(
   undefined
 );
 
-const initialState: WorkflowState = {
-  rootItem: undefined,
-  items: {},
-};
+// Use the default template as the initial state
+const initialState: WorkflowState = DEFAULT_WORKFLOW;
 
 const workflowReducer = (
-  state: WorkflowState = { rootItem: undefined, items: {} },
+  state: WorkflowState = initialState,
   action: WorkflowAction
 ): WorkflowState => {
   switch (action.type) {
@@ -124,28 +161,23 @@ const workflowReducer = (
         name: action.name,
         currentState: workflow.initialState,
         children: [],
+        nextApprover: undefined,
       };
 
       if (!state.rootItem) {
-        // No root exists, the new item becomes the root
         return {
           ...state,
           rootItem: newItem.id,
           items: {
             [newItem.id]: newItem,
           },
-          workflowKey: state.workflowKey, // Preserve existing key
-          workflowDescription: state.workflowDescription, // Preserve existing description
+          workflowKey: state.workflowKey,
+          workflowDescription: state.workflowDescription,
         };
       } else {
-        // Find the last item in the hierarchy
         const findLastItem = (itemId: string): string => {
           const item = state.items[itemId];
-          if (item.children.length === 0) {
-            // No children, this is the last item
-            return itemId;
-          }
-          // Recursively go deeper into the last child
+          if (item.children.length === 0) return itemId;
           return findLastItem(item.children[item.children.length - 1]);
         };
 
@@ -155,14 +187,14 @@ const workflowReducer = (
           ...state,
           items: {
             ...state.items,
-            [action.itemId]: newItem, // Add the new item
+            [action.itemId]: newItem,
             [lastItemId]: {
               ...state.items[lastItemId],
-              children: [...state.items[lastItemId].children, action.itemId], // Append to last item
+              children: [...state.items[lastItemId].children, action.itemId],
             },
           },
-          workflowKey: state.workflowKey, // Preserve existing key
-          workflowDescription: state.workflowDescription, // Preserve existing description
+          workflowKey: state.workflowKey,
+          workflowDescription: state.workflowDescription,
         };
       }
     }
@@ -170,10 +202,8 @@ const workflowReducer = (
     case "transition": {
       const currentItem = state.items[action.itemId];
       if (!currentItem) return state;
-
       const transitions = workflow.states[currentItem.currentState]?.on;
       if (!transitions || !transitions[action.action]) return state;
-
       return {
         ...state,
         items: {
@@ -189,14 +219,13 @@ const workflowReducer = (
     case "insertAfter": {
       const parentItem = state.items[action.itemId];
       if (!parentItem) return state;
-
       const newItem: WorkflowItemState = {
         id: action.newItemId,
         name: action.name,
         currentState: "draft",
         children: [],
+        nextApprover: undefined,
       };
-
       return {
         ...state,
         items: {
@@ -212,7 +241,6 @@ const workflowReducer = (
 
     case "deleteStep": {
       const { [action.itemId]: _, ...remainingItems } = state.items;
-
       const removeChildFromParent = (
         items: Record<string, WorkflowItemState>
       ) =>
@@ -225,7 +253,6 @@ const workflowReducer = (
           };
           return acc;
         }, {} as Record<string, WorkflowItemState>);
-
       return {
         ...state,
         items: removeChildFromParent(remainingItems),
@@ -236,13 +263,10 @@ const workflowReducer = (
       const removeChildrenRecursively = (itemId: string) => {
         const item = state.items[itemId];
         if (!item) return;
-
         item.children.forEach(removeChildrenRecursively);
         delete state.items[itemId];
       };
-
       removeChildrenRecursively(action.itemId);
-
       return {
         ...state,
         items: {
@@ -261,24 +285,18 @@ const workflowReducer = (
     case "updateName": {
       const currentItem = state.items[action.itemId];
       if (!currentItem) return state;
-
       return {
         ...state,
         items: {
           ...state.items,
-          [action.itemId]: {
-            ...currentItem,
-            name: action.name,
-          },
+          [action.itemId]: { ...currentItem, name: action.name },
         },
       };
     }
 
     case "updateItem": {
-      console.log("updateItem called...");
       const currentItem = state.items[action.itemId];
       if (!currentItem) return state;
-
       return {
         ...state,
         items: {
@@ -321,28 +339,26 @@ export const WorkflowProvider = ({ children }: { children: ReactNode }) => {
       workflowKey: state.workflowKey,
       workflowDescription: state.workflowDescription,
     };
-
     localStorage.setItem(`workflow_${name}`, JSON.stringify(workflowToSave));
-    setSavedWorkflows(getSavedWorkflows()); // Update saved workflows list
+    setSavedWorkflows(getSavedWorkflows());
   };
 
   const unloadWorkflow = () => {
-    dispatch({ type: "loadWorkflow", workflowState: initialState }); // Reset the workflow state
-    setCurrentWorkflowName(""); // Clear the workflow name
+    dispatch({ type: "loadWorkflow", workflowState: initialState });
+    setCurrentWorkflowName("");
   };
 
   const loadWorkflow = (workflowName: string) => {
     const savedWorkflow = localStorage.getItem(`workflow_${workflowName}`);
     if (savedWorkflow) {
       const workflowState = JSON.parse(savedWorkflow);
-
       dispatch({
         type: "loadWorkflow",
         workflowState: {
           rootItem: workflowState.rootItem,
           items: workflowState.items,
-          workflowKey: workflowState.workflowKey || "", // Load key or default to empty
-          workflowDescription: workflowState.workflowDescription || "", // Load description or default to empty
+          workflowKey: workflowState.workflowKey || "",
+          workflowDescription: workflowState.workflowDescription || "",
         },
       });
       setLoading(false);
@@ -360,6 +376,14 @@ export const WorkflowProvider = ({ children }: { children: ReactNode }) => {
     );
     return keys.map((key) => key.replace("workflow_", ""));
   };
+
+  // When the provider mounts, ensure the default workflow is saved
+  useEffect(() => {
+    const defaultWorkflowName = "Default Template";
+    if (!localStorage.getItem(`workflow_${defaultWorkflowName}`)) {
+      saveWorkflow(defaultWorkflowName);
+    }
+  }, []);
 
   useEffect(() => {
     setSavedWorkflows(getSavedWorkflows());

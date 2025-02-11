@@ -1,3 +1,4 @@
+// WorkflowComponent.tsx
 import React, { useState, useEffect, useRef, memo } from "react";
 import {
   Dialog,
@@ -12,7 +13,7 @@ import {
 import { useWorkflow } from "@/app/context/WorkflowContext";
 import workflow from "@/app/workflow-engine/workflow";
 import { useUser } from "@/app/context/UserContext";
-import { AccessRole } from "@/app/constants";
+import { AccessRole, USERS } from "@/app/constants"; // Import USERS here
 
 const WorkflowComponent: React.FC = memo(() => {
   const {
@@ -218,16 +219,13 @@ const WorkflowComponent: React.FC = memo(() => {
     const trimmedName = newName.trim();
 
     if (unsavedItems.has(itemId)) {
-      // If this is an unsaved item, just updating name is fine.
-      // The "Save Name" button will appear if name is not empty.
+      // For unsaved items, simply updating the name is fine.
       return;
     }
 
-    // For existing items, check if the name differs from the original
     if (trimmedName.length > 0 && trimmedName !== originalName) {
       setChangedItems((prev) => new Set(prev).add(itemId));
     } else {
-      // If user reverts back to original name or clears it out
       setChangedItems((prev) => {
         const updated = new Set(prev);
         updated.delete(itemId);
@@ -237,7 +235,6 @@ const WorkflowComponent: React.FC = memo(() => {
   };
 
   const handleSaveItemName = (itemId: string) => {
-    // If it was unsaved, remove from unsaved
     if (unsavedItems.has(itemId)) {
       setUnsavedItems((prev) => {
         const updated = new Set(prev);
@@ -245,8 +242,6 @@ const WorkflowComponent: React.FC = memo(() => {
         return updated;
       });
     }
-
-    // If it was changed, remove from changedItems
     if (changedItems.has(itemId)) {
       setChangedItems((prev) => {
         const updated = new Set(prev);
@@ -254,16 +249,12 @@ const WorkflowComponent: React.FC = memo(() => {
         return updated;
       });
     }
-
-    // Update the originalItemNames with the new name
     const updatedItems = { ...originalItemNames };
     updatedItems[itemId] = state.items[itemId].name;
     setOriginalItemNames(updatedItems);
-
     setNeedsSave(true);
   };
 
-  // Save the workflow when state changes if needsSave is true and we have a current workflow
   useEffect(() => {
     if (needsSave && currentWorkflowName && state.rootItem) {
       console.log(
@@ -272,7 +263,6 @@ const WorkflowComponent: React.FC = memo(() => {
         state
       );
 
-      // Update originalItemNames for any items that aren't tracked yet
       const newOriginals = { ...originalItemNames };
       for (const [id, item] of Object.entries(state.items)) {
         if (!newOriginals[id]) {
@@ -304,8 +294,8 @@ const WorkflowComponent: React.FC = memo(() => {
 
   const handleSaveEdit = () => {
     if (editingItem) {
-      dispatch({ type: "updateItem", itemId: editingItem, data: editData }); // Dispatch update action
-      saveWorkflow(currentWorkflowName); // Save the entire workflow
+      dispatch({ type: "updateItem", itemId: editingItem, data: editData });
+      saveWorkflow(currentWorkflowName);
       setEditingItem(null);
       setEditData({});
       setIsDialogOpen(false);
@@ -331,18 +321,13 @@ const WorkflowComponent: React.FC = memo(() => {
 
   const handleAddFirstItem = () => {
     const rootItemId = `root-${Date.now()}`;
-
-    // Dispatch action to create the root item
     dispatch({
       type: "initialize",
       itemId: rootItemId,
-      name: newItemName.trim(), // Use the entered name
+      name: newItemName.trim(),
     });
-
-    // Clear the input field
     setNewItemName("");
-
-    setNeedsSave(true); // Mark the workflow as needing save
+    setNeedsSave(true);
   };
 
   const renderItem = (itemId: string): JSX.Element => {
@@ -352,7 +337,6 @@ const WorkflowComponent: React.FC = memo(() => {
     const isUnsaved = unsavedItems.has(item.id);
     const isChanged = changedItems.has(item.id);
     const trimmedName = item.name.trim();
-
     const showSaveName = (isUnsaved || isChanged) && trimmedName.length > 0;
 
     return (
@@ -376,8 +360,15 @@ const WorkflowComponent: React.FC = memo(() => {
           <p className="text-lg">
             Current State:{" "}
             <span className="font-semibold">{item.currentState}</span>
+            {/* If nextApprover is set, display it */}
+            {item.nextApprover && (
+              <>
+                {" "}
+                - Next Approver:{" "}
+                <span className="font-semibold">{item.nextApprover}</span>
+              </>
+            )}
           </p>
-
           {showSaveName && (
             <button
               onClick={() => handleSaveItemName(item.id)}
@@ -398,7 +389,7 @@ const WorkflowComponent: React.FC = memo(() => {
             </button>
           ))}
 
-          {user.role != AccessRole.USER && (
+          {user.role !== AccessRole.USER && (
             <>
               <button
                 onClick={() => handleEditClick(item.id)}
@@ -427,7 +418,6 @@ const WorkflowComponent: React.FC = memo(() => {
             </>
           )}
         </div>
-
         {!isCollapsed && item.children.length > 0 && (
           <ul className="pl-5 list-disc">
             {item.children.map((childId) => renderItem(childId))}
@@ -521,6 +511,27 @@ const WorkflowComponent: React.FC = memo(() => {
                 className="w-full border border-gray-300 rounded-lg p-2"
               />
             </div>
+
+            {/* New Dropdown for Next Approver */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Next Approver
+              </label>
+              <select
+                value={editData.nextApprover || ""}
+                onChange={(e) =>
+                  handleEditChange("nextApprover", e.target.value)
+                }
+                className="w-full border border-gray-300 rounded-lg p-2"
+              >
+                <option value="">Select Next Approver</option>
+                {USERS.map((u) => (
+                  <option key={u.name} value={u.name}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <DialogFooter>
             <button
@@ -540,15 +551,12 @@ const WorkflowComponent: React.FC = memo(() => {
       </Dialog>
 
       {/* Restrict "Create New Workflow" based on user role */}
-      {user.role != AccessRole.USER && !currentWorkflowName && (
+      {user.role !== AccessRole.USER && !currentWorkflowName && (
         <div>
           <h3 className="block text-lg font-medium text-gray-700 text-center pb-4">
             Create a New Workflow
           </h3>
-
-          {/* Display the Key, Name and Description */}
           <div className="flex items-center space-x-4">
-            {/* Workflow Key */}
             <div className="flex-1">
               <label
                 htmlFor="workflow-key"
@@ -565,8 +573,6 @@ const WorkflowComponent: React.FC = memo(() => {
                 placeholder="Enter workflow key"
               />
             </div>
-
-            {/* Workflow Name */}
             <div className="flex-1">
               <label
                 htmlFor="workflow-name"
@@ -583,8 +589,6 @@ const WorkflowComponent: React.FC = memo(() => {
                 placeholder="Enter name for new workflow"
               />
             </div>
-
-            {/* Workflow Description */}
             <div className="flex-1">
               <label
                 htmlFor="workflow-description"
@@ -603,8 +607,6 @@ const WorkflowComponent: React.FC = memo(() => {
                 placeholder="Enter workflow description"
               />
             </div>
-
-            {/* Create New Workflow */}
             <div className="flex-shrink-0">
               <button
                 onClick={handleCreateNewWorkflow}
@@ -616,6 +618,7 @@ const WorkflowComponent: React.FC = memo(() => {
           </div>
         </div>
       )}
+
       {/* Viewing a Workflow */}
       {currentWorkflowName && (
         <>
@@ -648,8 +651,7 @@ const WorkflowComponent: React.FC = memo(() => {
               </div>
             </div>
             <div className="flex space-x-2">
-              {/* ADMIN access buttons */}
-              {user.role != AccessRole.USER && (
+              {user.role !== AccessRole.USER && (
                 <>
                   <button
                     onClick={handleSaveWorkflow}
@@ -677,16 +679,13 @@ const WorkflowComponent: React.FC = memo(() => {
           {/* Workflow Body */}
           <div className="mb-4">
             <div>
-              {/* Prompt to Add First Item */}
-              {state.rootItem?.length == 0 && (
+              {state.rootItem?.length === 0 && (
                 <div className="text-center">
                   <p className="text-gray-500 mb-2">
                     No items in this workflow yet. Start by adding one!
                   </p>
                 </div>
               )}
-
-              {/* Show Add Item Form */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   New Item Name
@@ -718,8 +717,7 @@ const WorkflowComponent: React.FC = memo(() => {
         </>
       )}
 
-      {/* Restrict "Create New Workflow" button */}
-      {user.role == AccessRole.USER && !currentWorkflowName && (
+      {user.role === AccessRole.USER && !currentWorkflowName && (
         <p className="text-center text-gray-500">
           You do not have permission to create new workflows. Please select an
           existing workflow to view.

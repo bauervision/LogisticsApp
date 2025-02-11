@@ -1,3 +1,5 @@
+import { WorkflowItemState, WorkflowState } from "./context/WorkflowContext";
+
 // constants.ts
 export const FIELD_TYPES = {
   TEXT: "text",
@@ -190,3 +192,40 @@ export const USERS: User[] = [
   { name: "Dan User", role: AccessRole.USER },
   { name: "John Guest", role: AccessRole.GUEST },
 ];
+
+// In your WorkflowContext.tsx (or in a separate file you import here)
+export const DEFAULT_WORKFLOW: WorkflowState = {
+  rootItem: "order-received",
+  items: {
+    "order-received": {
+      id: "order-received",
+      name: "Order Received",
+      currentState: "draft",
+      children: ["sourcing"],
+      nextApprover: undefined, // No approver set by default
+    },
+    sourcing: {
+      id: "sourcing",
+      name: "Sourcing",
+      currentState: "draft",
+      children: ["purchasing"],
+      nextApprover: undefined,
+    },
+    purchasing: {
+      id: "purchasing",
+      name: "Purchasing",
+      currentState: "draft",
+      children: ["order-complete"],
+      nextApprover: undefined,
+    },
+    "order-complete": {
+      id: "order-complete",
+      name: "Order Complete",
+      currentState: "draft",
+      children: [],
+      nextApprover: undefined,
+    },
+  },
+  workflowKey: "default",
+  workflowDescription: "Default Template Workflow",
+};
