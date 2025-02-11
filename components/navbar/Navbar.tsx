@@ -86,7 +86,6 @@ function Navbar() {
           className="flex items-center space-x-4 headerItem"
           data-testid={`Header role-switch`}
         >
-          <span>{user.name}</span>
           {isLoading ? <div>Loading...</div> : <RoleDropdown />}
         </div>
       </div>

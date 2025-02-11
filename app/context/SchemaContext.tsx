@@ -15,8 +15,9 @@ export interface SchemaItem {
   type: string;
   parameter: string;
   format?: string;
-  readOnly?: boolean;
-  isRequired?: boolean;
+  readOnly: boolean;
+  isRequired: boolean;
+  defaultField: boolean;
 }
 
 export type Schema = SchemaItem[];

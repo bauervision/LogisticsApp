@@ -20,7 +20,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { format, parse } from "date-fns";
 import Link from "next/link";
 import RequestToast, { showToast } from "./Requests/RequestToast";
-import { useFetchWithToast } from "@/hooks/fetchWithToast";
+import { useUser } from "@/app/context/UserContext";
 
 const DATE_FORMATS: { [key: string]: string } = {
   "MM/DD/YYYY": "MM/dd/yyyy",
@@ -39,14 +39,17 @@ const OrderRequestForm = () => {
     setCurrentWorkflowName,
     loadWorkflow,
   } = useWorkflow();
-  const { addRow, data } = useRequestContext(); // Destructure "data" from RequestContext
+  const { addRow, data } = useRequestContext();
+  const { user } = useUser();
 
   const [formValues, setFormValues] = useState<{ [key: string]: any }>({});
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [workflowSteps, setWorkflowSteps] = useState<string[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
 
-  // Handle workflow selection
+  // ----------------------------
+  // Workflow Handling
+  // ----------------------------
   const handleWorkflowChange = (workflowName: string) => {
     setCurrentWorkflowName(workflowName);
     loadWorkflow(workflowName);
@@ -59,7 +62,6 @@ const OrderRequestForm = () => {
     }
   };
 
-  // Extract workflow steps recursively
   const extractWorkflowSteps = (
     itemId: string,
     steps: string[] = []
@@ -72,14 +74,14 @@ const OrderRequestForm = () => {
     return steps;
   };
 
-  // Handle input changes
+  // ----------------------------
+  // Input Handlers
+  // ----------------------------
   const handleInputChange = (field: string, value: any) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
-    // Clear error if user has provided a value.
     setErrors((prev) => ({ ...prev, [field]: !value }));
   };
 
-  // Handle Date Picker Changes
   const handleDateChange = (
     field: string,
     date: Date | null,
@@ -91,80 +93,79 @@ const OrderRequestForm = () => {
     setErrors((prev) => ({ ...prev, [field]: !formattedDate }));
   };
 
-  // Get today's date in the correct format
   const getFormattedTodayDate = (formatStr: string) => {
     return format(new Date(), DATE_FORMATS[formatStr] || "yyyy-MM-dd");
   };
 
-  // On form load, set default values (for example, Request Created)
+  // Set default "Request Created" on mount.
   useEffect(() => {
     setFormValues((prev) => ({
       ...prev,
+      "Request Creator": user.name,
+      "Next Step Approver": user.name,
       "Request Created": getFormattedTodayDate("MM-DD-YYYY"),
     }));
   }, []);
 
-  // Set the "Request Number" based on the saved orders.
+  // Set the "Request Number" based on saved orders.
   useEffect(() => {
-    // If there are saved orders, take the last order's Request Number,
-    // increment it, and pad with leading zeros to 7 digits.
     const newRequestNumber =
       data && data.length > 0
         ? (parseInt(data[data.length - 1]["Request Number"], 10) + 1)
             .toString()
             .padStart(7, "0")
         : "0000001";
-
     setFormValues((prev) => ({
       ...prev,
       "Request Number": newRequestNumber,
     }));
   }, [data]);
 
-  // Validate required fields
+  // ----------------------------
+  // Validation
+  // ----------------------------
   const validateForm = () => {
-    console.log("Validating...");
     const newErrors: { [key: string]: boolean } = {};
 
-    // Validate workflow selection
+    // Validate workflow selection.
     if (!currentWorkflowName) {
       newErrors.workflow = true;
     }
-    console.log("currentWorkflowName..." + currentWorkflowName);
-    // Validate all required fields
+
+    // Validate all required fields.
+    // (Assumes that fields in schema have an "isRequired" property.)
     [...(schema || [])].forEach((field) => {
       if (
         !formValues[field.parameter] ||
         formValues[field.parameter].toString().trim() === ""
       ) {
-        // validate field only if required
-        if (field.isRequired && field.parameter != "Request Status")
+        if (field.isRequired && field.parameter !== "Request Status")
           newErrors[field.parameter] = true;
       }
     });
-    console.log("newErrors...", newErrors);
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle form submission
+  // ----------------------------
+  // Submission
+  // ----------------------------
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    console.log("Submitting...");
+
     if (!validateForm()) {
       console.log("Failed Validation!");
       return;
     }
-    console.log("Passed Valdation...");
-    // Determine the first step of the workflow.
+
     let firstStep = "";
     if (workflowSteps.length > 0) {
       firstStep = workflowSteps[0];
     } else if (state.rootItem && state.items[state.rootItem]) {
       firstStep = state.items[state.rootItem].name;
     }
-    console.log("First Step = " + firstStep);
-    // Create new request data including all field groups
+
     const newRow = {
       ...formValues,
       id: rowData ? rowData.length + 1 : 1,
@@ -174,24 +175,16 @@ const OrderRequestForm = () => {
       },
     };
 
-    // Log the final request data for verification
-    console.log("Final Request Data:", newRow);
-
-    // Use the data context to store the new request
     addRow(newRow);
-
-    // Reset the form and show submission confirmation temporarily
     setFormValues({});
     setFormSubmitted(true);
-
     setTimeout(() => setFormSubmitted(false), 3000);
-    handleRequestSave();
-  };
-
-  const handleRequestSave = async () => {
     showToast("New Request Submitted successfully", "success");
   };
 
+  // ----------------------------
+  // Rendering
+  // ----------------------------
   return (
     <div className="p-6 bg-white shadow-md rounded-md">
       <RequestToast />
@@ -205,7 +198,6 @@ const OrderRequestForm = () => {
               <span className="text-red-500 text-xs ml-2">* Required</span>
             )}
           </Label>
-
           {savedWorkflows.length === 0 ? (
             <div className="flex flex-col items-start gap-2">
               <p className="text-red-500 text-xs">No workflows available.</p>
@@ -238,14 +230,23 @@ const OrderRequestForm = () => {
           )}
         </div>
 
-        {/* (Schema Fields) */}
+        {/* Customer Specific Details Section */}
         <div>
           <h3 className="text-lg font-semibold mb-3">
             Customer Specific Details
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-md">
             {schema
-              ?.filter((field) => field.parameter !== "Request Status")
+              ?.filter(
+                (field) =>
+                  field.parameter !== "Request Status" &&
+                  ![
+                    "Customer POC Name",
+                    "Customer POC Email",
+                    "Attention To ( If different )",
+                  ].includes(field.parameter) &&
+                  !field.parameter.startsWith("Shipping Address:")
+              )
               .map((field) => (
                 <div key={field.id} className="space-y-2">
                   <Label
@@ -259,15 +260,8 @@ const OrderRequestForm = () => {
                       </span>
                     )}
                   </Label>
-                  {field.parameter === "Request Created" ? (
-                    <Input
-                      type="text"
-                      value={formValues[field.parameter] ?? ""}
-                      readOnly
-                      className="w-full border rounded-md px-2 py-2 text-sm bg-gray-100 cursor-not-allowed"
-                    />
-                  ) : field.type.toUpperCase() ===
-                    FIELD_TYPES.DATE.toUpperCase() ? (
+                  {field.type.toUpperCase() ===
+                  FIELD_TYPES.DATE.toUpperCase() ? (
                     <div className="relative">
                       <DatePicker
                         selected={
@@ -288,11 +282,13 @@ const OrderRequestForm = () => {
                         }
                         dateFormat={DATE_FORMATS[field.format ?? "YYYY-MM-DD"]}
                         className="w-full border rounded-md px-2 py-2 text-sm"
+                        readOnly={field.readOnly}
                       />
                     </div>
                   ) : (
                     <Input
                       type="text"
+                      readOnly={field.readOnly}
                       value={formValues[field.parameter] ?? ""}
                       onChange={(e) =>
                         handleInputChange(field.parameter, e.target.value)
@@ -302,6 +298,72 @@ const OrderRequestForm = () => {
                 </div>
               ))}
           </div>
+        </div>
+
+        {/* Shipping Details Section */}
+        <div className="bg-gray-50 p-4 rounded-md">
+          <h3 className="text-lg font-semibold mb-3">Shipping Details</h3>
+          {/* POC Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {SHIPPING_FIELDS.filter((field) =>
+              [
+                "Customer POC Name",
+                "Customer POC Email",
+                "Attention To ( If different )",
+              ].includes(field.parameter)
+            ).map((field) => (
+              <div key={field.id} className="space-y-2">
+                <Label
+                  htmlFor={field.parameter}
+                  className="font-medium text-sm"
+                >
+                  {field.parameter}
+                  {errors[field.parameter] && field.isRequired && (
+                    <span className="text-red-500 text-xs ml-2">
+                      * Required
+                    </span>
+                  )}
+                </Label>
+                <Input
+                  type="text"
+                  value={formValues[field.parameter] ?? ""}
+                  onChange={(e) =>
+                    handleInputChange(field.parameter, e.target.value)
+                  }
+                />
+              </div>
+            ))}
+          </div>
+          {/* Shipping Address Sub-Section */}
+          <fieldset className="mt-4 border p-4 rounded-md">
+            <legend className="px-2 font-semibold">Shipping Address</legend>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {SHIPPING_FIELDS.filter((field) =>
+                field.parameter.startsWith("Shipping Address:")
+              ).map((field) => (
+                <div key={field.id} className="space-y-2">
+                  <Label
+                    htmlFor={field.parameter}
+                    className="font-medium text-sm"
+                  >
+                    {field.parameter.replace("Shipping Address: ", "")}
+                    {errors[field.parameter] && field.isRequired && (
+                      <span className="text-red-500 text-xs ml-2">
+                        * Required
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    type="text"
+                    value={formValues[field.parameter] ?? ""}
+                    onChange={(e) =>
+                      handleInputChange(field.parameter, e.target.value)
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          </fieldset>
         </div>
 
         <Button type="submit" className="w-full">

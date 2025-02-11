@@ -12,6 +12,7 @@ import {
 import { useWorkflow } from "@/app/context/WorkflowContext";
 import workflow from "@/app/workflow-engine/workflow";
 import { useUser } from "@/app/context/UserContext";
+import { AccessRole } from "@/app/constants";
 
 const WorkflowComponent: React.FC = memo(() => {
   const {
@@ -397,7 +398,7 @@ const WorkflowComponent: React.FC = memo(() => {
             </button>
           ))}
 
-          {user.role == "admin" && (
+          {user.role != AccessRole.USER && (
             <>
               <button
                 onClick={() => handleEditClick(item.id)}
@@ -539,7 +540,7 @@ const WorkflowComponent: React.FC = memo(() => {
       </Dialog>
 
       {/* Restrict "Create New Workflow" based on user role */}
-      {user.role === "admin" && !currentWorkflowName && (
+      {user.role != AccessRole.USER && !currentWorkflowName && (
         <div>
           <h3 className="block text-lg font-medium text-gray-700 text-center pb-4">
             Create a New Workflow
@@ -648,7 +649,7 @@ const WorkflowComponent: React.FC = memo(() => {
             </div>
             <div className="flex space-x-2">
               {/* ADMIN access buttons */}
-              {user.role === "admin" && (
+              {user.role != AccessRole.USER && (
                 <>
                   <button
                     onClick={handleSaveWorkflow}
@@ -718,7 +719,7 @@ const WorkflowComponent: React.FC = memo(() => {
       )}
 
       {/* Restrict "Create New Workflow" button */}
-      {user.role !== "admin" && !currentWorkflowName && (
+      {user.role == AccessRole.USER && !currentWorkflowName && (
         <p className="text-center text-gray-500">
           You do not have permission to create new workflows. Please select an
           existing workflow to view.

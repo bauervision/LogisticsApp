@@ -10,6 +10,7 @@ import { SideBar } from "@/components/SideBar";
 import { UserProvider } from "./context/UserContext";
 import { WorkflowProvider } from "./context/WorkflowContext";
 import { SchemaProvider } from "./context/SchemaContext";
+import { AccessRole } from "./constants";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -39,7 +40,13 @@ export default function RootLayout({
       >
         <main>
           <UserProvider>
-            <ProtectedRoute requiredRoles={["admin", "user"]}>
+            <ProtectedRoute
+              requiredRoles={[
+                AccessRole.SUPER_ADMIN,
+                AccessRole.ADMIN,
+                AccessRole.USER,
+              ]}
+            >
               <Navbar />
 
               <div>

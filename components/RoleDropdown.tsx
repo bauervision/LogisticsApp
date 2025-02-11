@@ -9,25 +9,29 @@ import {
 } from "./ui/dropdown-menu";
 import { useUser } from "@/app/context/UserContext";
 import { Button } from "./ui/button";
+import { AccessRole, USERS } from "@/app/constants";
 
 const RoleDropdown: React.FC = () => {
   const { user, setUser } = useUser();
-  const roles = ["admin", "user", "guest"];
+  const users = USERS;
 
-  const handleRoleChange = (role: string) => {
-    setUser({ ...user, role });
+  const handleUserChange = (index: number) => {
+    setUser(USERS[index]);
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className="btn">Role: {user.role}</Button>
+        <Button className="btn">{user.name}</Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        <DropdownMenuLabel>Select Role</DropdownMenuLabel>
-        {roles.map((role) => (
-          <DropdownMenuItem key={role} onClick={() => handleRoleChange(role)}>
-            {role}
+        <DropdownMenuLabel>Select User</DropdownMenuLabel>
+        {users.map((newUser, i) => (
+          <DropdownMenuItem
+            key={newUser.name}
+            onClick={() => handleUserChange(i)}
+          >
+            {newUser.name}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

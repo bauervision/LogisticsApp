@@ -7,11 +7,7 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
-
-interface User {
-  name: string;
-  role: string;
-}
+import { USERS, User } from "../constants";
 
 interface UserContextType {
   user: User;
@@ -21,7 +17,7 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User>({ name: "John Doe", role: "admin" });
+  const [user, setUser] = useState<User>(USERS[0]); // default to first user
 
   return (
     <UserContext.Provider value={{ user, setUser }}>

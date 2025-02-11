@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import React, { ReactNode, useEffect, useState } from "react";
 import { useUser } from "../context/UserContext";
+import { AccessRole } from "../constants";
 
 type NewLayoutProps = {
   children: ReactNode;
@@ -30,7 +31,7 @@ const RequestsLayout: React.FC<NewLayoutProps> = ({
   }, []);
 
   const userAccess =
-    user.role == "admin"
+    user.role == AccessRole.SUPER_ADMIN || user.role == AccessRole.ADMIN
       ? "You can VIEW, ADD, CHANGE, or DELETE Records here."
       : " You can only VIEW records here.";
 

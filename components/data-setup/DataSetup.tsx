@@ -1,11 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  ColDef,
-  SchemaItem as ContextSchemaItem,
-  SchemaItem,
-} from "@/app/context/SchemaContext";
+import { ColDef, SchemaItem } from "@/app/context/SchemaContext";
 
 import { SchemaContent } from "./SchemaContent";
 import { CSVParser } from "./CSVParser";
@@ -41,10 +37,10 @@ const DataSetup: React.FC = () => {
 
   const [mode, setMode] = useState<"csv" | "manual">("csv");
 
-  // Prepopulate manual schema with built‑in fields (marking them as readOnly)
+  // Prepopulate manual schema with built‑in fields
   const [manualSchema, setManualSchema] = useState<SchemaItem[]>([
-    ...PRESET_FIELDS.map((field) => ({ ...field, readOnly: true })),
-    ...SHIPPING_FIELDS.map((field) => ({ ...field, readOnly: true })),
+    ...PRESET_FIELDS,
+    ...SHIPPING_FIELDS,
   ]);
 
   // When saving in manual mode, simply use the manual schema
@@ -69,6 +65,9 @@ const DataSetup: React.FC = () => {
       id: Date.now(),
       type: FIELD_TYPES.TEXT, // Default type for new fields
       parameter: "", // Default empty parameter
+      defaultField: false,
+      isRequired: false,
+      readOnly: false,
     };
     setManualSchema((prev) => [...prev, newField]);
   };
@@ -93,8 +92,6 @@ const DataSetup: React.FC = () => {
 
   // When switching modes, we preserve manual schema so built‑in fields remain.
   const handleModeChange = (newMode: "csv" | "manual") => {
-    // Optionally clear manualSchema when switching to CSV mode:
-    // if (newMode === "csv") setManualSchema([]);
     setMode(newMode);
   };
 
@@ -103,8 +100,8 @@ const DataSetup: React.FC = () => {
   }, [schema]);
 
   // Separate built‑in fields from additional (user-added) fields.
-  const builtInFields = manualSchema.filter((field) => field.readOnly);
-  const additionalFields = manualSchema.filter((field) => !field.readOnly);
+  const builtInFields = manualSchema.filter((field) => field.defaultField);
+  const additionalFields = manualSchema.filter((field) => !field.defaultField);
 
   return (
     <div className="bg-gray-100 w-full flex flex-col h-full">
@@ -159,6 +156,7 @@ const DataSetup: React.FC = () => {
                       placeholder="Field Name"
                       value={field.parameter}
                       readOnly
+                      disabled
                     />
 
                     {/* Type Dropdown (disabled) */}

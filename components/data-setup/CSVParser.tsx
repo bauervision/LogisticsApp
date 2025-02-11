@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Papa from "papaparse";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { SchemaItem } from "@/app/context/SchemaContext";
 
 // Define types for props
 interface CSVParserProps {
@@ -9,12 +10,6 @@ interface CSVParserProps {
   handleDataCreation: (data: any[]) => void;
   saveParsedData: (headers: string[], data: any[]) => void;
   setSchema: (schema: SchemaItem[]) => void;
-}
-
-interface SchemaItem {
-  id: number;
-  type: string;
-  parameter: string;
 }
 
 const allowedExtensions = ["csv"];
@@ -74,6 +69,9 @@ export const CSVParser: React.FC<CSVParserProps> = ({
         id: index,
         type: "string",
         parameter: row,
+        isRequired: false,
+        defaultField: false,
+        readOnly: false,
       }));
 
       parsedData.pop(); // Remove any extra data
