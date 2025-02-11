@@ -14,7 +14,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { FIELD_TYPES, PRESET_FIELDS, SHIPPING_FIELDS } from "@/app/constants";
+import { FIELD_TYPES, USERS, SHIPPING_FIELDS } from "@/app/constants";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format, parse } from "date-fns";
@@ -41,6 +41,7 @@ const OrderRequestForm = () => {
   } = useWorkflow();
   const { addRow, data } = useRequestContext();
   const { user } = useUser();
+  const { state: workflowState } = useWorkflow();
 
   const [formValues, setFormValues] = useState<{ [key: string]: any }>({});
   const [formSubmitted, setFormSubmitted] = useState(false);
@@ -99,10 +100,21 @@ const OrderRequestForm = () => {
 
   // Set default "Request Created" on mount.
   useEffect(() => {
+    // Initialize nextApprover with an empty string by default
+    let nextApprover = "";
+
+    // If the workflow is loaded and there's a root item, get the first step.
+    if (workflowState.rootItem) {
+      const firstStep = workflowState.items[workflowState.rootItem];
+      if (firstStep && firstStep.nextApprover) {
+        nextApprover = firstStep.nextApprover;
+      }
+    }
+
     setFormValues((prev) => ({
       ...prev,
       "Request Creator": user.name,
-      "Next Step Approver": user.name,
+      "Next Step Approver": nextApprover,
       "Request Created": getFormattedTodayDate("MM-DD-YYYY"),
     }));
   }, []);
@@ -182,6 +194,20 @@ const OrderRequestForm = () => {
     showToast("New Request Submitted successfully", "success");
   };
 
+  useEffect(() => {
+    // Check that a workflow is selected and the workflow has been loaded.
+    if (currentWorkflowName && workflowState.rootItem) {
+      // Retrieve the nextApprover value from the first step of the workflow.
+      const nextApprover =
+        workflowState.items[workflowState.rootItem]?.nextApprover || "";
+      // Update the form values with the retrieved Next Step Approver.
+      setFormValues((prev) => ({
+        ...prev,
+        "Next Step Approver": nextApprover,
+      }));
+    }
+  }, [currentWorkflowName, workflowState, setFormValues]);
+
   // ----------------------------
   // Rendering
   // ----------------------------
@@ -191,23 +217,15 @@ const OrderRequestForm = () => {
       <h2 className="text-lg font-bold mb-4">Create New Order Request</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Workflow Selector */}
-        <div>
-          <Label htmlFor="workflow" className="font-medium text-sm">
-            Select Workflow
-            {errors.workflow && (
-              <span className="text-red-500 text-xs ml-2">* Required</span>
-            )}
-          </Label>
-          {savedWorkflows.length === 0 ? (
-            <div className="flex flex-col items-start gap-2">
-              <p className="text-red-500 text-xs">No workflows available.</p>
-              <Link href="/request-tracker/workflow" passHref>
-                <Button className="bg-blue-800 text-white">
-                  Create Workflow
-                </Button>
-              </Link>
-            </div>
-          ) : (
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="workflow" className="font-medium text-sm">
+              Select Workflow
+              {errors.workflow && (
+                <span className="text-red-500 text-xs ml-2">* Required</span>
+              )}
+            </Label>
+
             <Select
               onValueChange={handleWorkflowChange}
               value={currentWorkflowName || undefined}
@@ -227,7 +245,13 @@ const OrderRequestForm = () => {
                 ))}
               </SelectContent>
             </Select>
-          )}
+          </div>
+
+          <Link href="/request-tracker/workflow" passHref>
+            <Button className="bg-blue-800 text-white">
+              Create A New Workflow
+            </Button>
+          </Link>
         </div>
 
         {/* Customer Specific Details Section */}
@@ -247,56 +271,90 @@ const OrderRequestForm = () => {
                   ].includes(field.parameter) &&
                   !field.parameter.startsWith("Shipping Address:")
               )
-              .map((field) => (
-                <div key={field.id} className="space-y-2">
-                  <Label
-                    htmlFor={field.parameter}
-                    className="font-medium text-sm"
-                  >
-                    {field.parameter}
-                    {errors[field.parameter] && field.isRequired && (
-                      <span className="text-red-500 text-xs ml-2">
-                        * Required
-                      </span>
-                    )}
-                  </Label>
-                  {field.type.toUpperCase() ===
-                  FIELD_TYPES.DATE.toUpperCase() ? (
-                    <div className="relative">
-                      <DatePicker
-                        selected={
-                          formValues[field.parameter]
-                            ? parse(
-                                formValues[field.parameter],
-                                DATE_FORMATS[field.format ?? "YYYY-MM-DD"],
-                                new Date()
-                              )
-                            : null
+              .map((field) => {
+                // For the Next Step Approver field, compute its default value.
+                const defaultNextApprover =
+                  formValues["Next Step Approver"] ||
+                  (workflowState.rootItem &&
+                    workflowState.items[workflowState.rootItem]
+                      ?.nextApprover) ||
+                  "";
+
+                return (
+                  <div key={field.id} className="space-y-2">
+                    <Label
+                      htmlFor={field.parameter}
+                      className="font-medium text-sm"
+                    >
+                      {field.parameter}
+                      {errors[field.parameter] && field.isRequired && (
+                        <span className="text-red-500 text-xs ml-2">
+                          * Required
+                        </span>
+                      )}
+                    </Label>
+
+                    {field.parameter === "Next Step Approver" ? (
+                      // Render a dropdown for Next Step Approver with default value.
+                      <Select
+                        value={defaultNextApprover}
+                        onValueChange={(value) =>
+                          handleInputChange(field.parameter, value)
                         }
-                        onChange={(date) =>
-                          handleDateChange(
-                            field.parameter,
-                            date,
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select Next Step Approver" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {USERS.map((userObj) => (
+                            <SelectItem key={userObj.name} value={userObj.name}>
+                              {userObj.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : field.type.toUpperCase() ===
+                      FIELD_TYPES.DATE.toUpperCase() ? (
+                      // Render a DatePicker for date fields.
+                      <div className="relative">
+                        <DatePicker
+                          selected={
+                            formValues[field.parameter]
+                              ? parse(
+                                  formValues[field.parameter],
+                                  DATE_FORMATS[field.format ?? "YYYY-MM-DD"],
+                                  new Date()
+                                )
+                              : null
+                          }
+                          onChange={(date) =>
+                            handleDateChange(
+                              field.parameter,
+                              date,
+                              DATE_FORMATS[field.format ?? "YYYY-MM-DD"]
+                            )
+                          }
+                          dateFormat={
                             DATE_FORMATS[field.format ?? "YYYY-MM-DD"]
-                          )
-                        }
-                        dateFormat={DATE_FORMATS[field.format ?? "YYYY-MM-DD"]}
-                        className="w-full border rounded-md px-2 py-2 text-sm"
+                          }
+                          className="w-full border rounded-md px-2 py-2 text-sm"
+                          readOnly={field.readOnly}
+                        />
+                      </div>
+                    ) : (
+                      // Render a standard text input for all other fields.
+                      <Input
+                        type="text"
                         readOnly={field.readOnly}
+                        value={formValues[field.parameter] ?? ""}
+                        onChange={(e) =>
+                          handleInputChange(field.parameter, e.target.value)
+                        }
                       />
-                    </div>
-                  ) : (
-                    <Input
-                      type="text"
-                      readOnly={field.readOnly}
-                      value={formValues[field.parameter] ?? ""}
-                      onChange={(e) =>
-                        handleInputChange(field.parameter, e.target.value)
-                      }
-                    />
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                );
+              })}
           </div>
         </div>
 
