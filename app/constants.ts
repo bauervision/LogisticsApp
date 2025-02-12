@@ -1,3 +1,4 @@
+import { RequestItem } from "./context/SchemaContext";
 import { WorkflowItemState, WorkflowState } from "./context/WorkflowContext";
 
 // constants.ts
@@ -8,6 +9,7 @@ export const FIELD_TYPES = {
   CURRENCY: "currency",
   DATE: "date",
   BOOLEAN: "boolean",
+  ITEMS: "items",
 };
 
 // Date format and field type options
@@ -25,9 +27,18 @@ export const FIELD_TYPES_OPTIONS = [
   { value: FIELD_TYPES.CURRENCY, label: "Currency" },
   { value: FIELD_TYPES.DATE, label: "Date" },
   { value: FIELD_TYPES.BOOLEAN, label: "Boolean" },
+  { value: FIELD_TYPES.ITEMS, label: "Items" },
 ];
 
 export const PRESET_FIELDS = [
+  {
+    id: "requestWorkflow",
+    type: FIELD_TYPES.TEXT,
+    parameter: "Request Workflow",
+    isRequired: true,
+    readOnly: false,
+    defaultField: true,
+  },
   {
     id: "requestCreated",
     type: FIELD_TYPES.DATE,
@@ -86,18 +97,18 @@ export const PRESET_FIELDS = [
     defaultField: true,
   },
   {
-    id: "requestedItems",
-    type: FIELD_TYPES.TEXT,
-    parameter: "Requested Items",
+    id: "requestedAwardDate",
+    type: FIELD_TYPES.DATE,
+    parameter: "Requested Award Date",
+    format: "MM-DD-YYYY",
     isRequired: true,
     readOnly: false,
     defaultField: true,
   },
   {
-    id: "requestedAwardDate",
-    type: FIELD_TYPES.DATE,
-    parameter: "Requested Award Date",
-    format: "MM-DD-YYYY",
+    id: "requestedItems",
+    type: FIELD_TYPES.ITEMS,
+    parameter: "Requested Items",
     isRequired: true,
     readOnly: false,
     defaultField: true,
@@ -229,3 +240,26 @@ export const DEFAULT_WORKFLOW: WorkflowState = {
   workflowKey: "default",
   workflowDescription: "Default Template Workflow",
 };
+
+export const PRODUCTS: RequestItem[] = [
+  {
+    product: "HP Workstation",
+    amount: 0,
+    price: 2467.78,
+  },
+  {
+    product: "Dell XP Desktop",
+    amount: 0,
+    price: 1276.45,
+  },
+  {
+    product: "Alienware ION Workstation",
+    amount: 0,
+    price: 3798.82,
+  },
+  {
+    product: "SSD Hardrive: 12TB",
+    amount: 0,
+    price: 5623.44,
+  },
+];

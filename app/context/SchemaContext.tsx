@@ -9,6 +9,12 @@ import React, {
 } from "react";
 import { useWorkflow } from "@/app/context/WorkflowContext";
 
+export interface RequestItem {
+  product: string;
+  price: number;
+  amount: number;
+}
+
 // Define SchemaItem and other types
 export interface SchemaItem {
   id: string | number;

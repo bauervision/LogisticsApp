@@ -14,14 +14,15 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { FIELD_TYPES, USERS, SHIPPING_FIELDS } from "@/app/constants";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format, parse } from "date-fns";
 import Link from "next/link";
 import RequestToast, { showToast } from "./Requests/RequestToast";
 import { useUser } from "@/app/context/UserContext";
+import { FIELD_TYPES, USERS, SHIPPING_FIELDS, PRODUCTS } from "@/app/constants";
 
+// Date formats mapping.
 const DATE_FORMATS: { [key: string]: string } = {
   "MM/DD/YYYY": "MM/dd/yyyy",
   "DD/MM/YYYY": "dd/MM/yyyy",
@@ -29,6 +30,13 @@ const DATE_FORMATS: { [key: string]: string } = {
   "MMM DD, YYYY": "MMM dd, yyyy",
   "MM-DD-YYYY": "MM-dd-yyyy",
 };
+
+// The RequestItem interface.
+export interface RequestItem {
+  product: string;
+  price: number;
+  amount: number;
+}
 
 const OrderRequestForm = () => {
   const { schema, rowData } = useSchema();
@@ -47,6 +55,13 @@ const OrderRequestForm = () => {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [workflowSteps, setWorkflowSteps] = useState<string[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
+
+  // Calculate the total cost of all request items.
+  const totalCost = (formValues["Requested Items"] || []).reduce(
+    (acc: number, item: RequestItem) =>
+      acc + (item.price || 0) * (item.amount || 0),
+    0
+  );
 
   // ----------------------------
   // Workflow Handling
@@ -69,7 +84,6 @@ const OrderRequestForm = () => {
   ): string[] => {
     const item = state.items[itemId];
     if (!item) return steps;
-
     steps.push(item.name);
     item.children.forEach((childId) => extractWorkflowSteps(childId, steps));
     return steps;
@@ -98,13 +112,41 @@ const OrderRequestForm = () => {
     return format(new Date(), DATE_FORMATS[formatStr] || "yyyy-MM-dd");
   };
 
-  // Set default "Request Created" on mount.
+  // ----------------------------
+  // Request Items Handlers
+  // ----------------------------
+  const handleRequestItemChange = (
+    index: number,
+    key: keyof RequestItem,
+    value: any
+  ) => {
+    const currentItems: RequestItem[] = formValues["Requested Items"] || [];
+    const updatedItems = [...currentItems];
+    updatedItems[index] = { ...updatedItems[index], [key]: value };
+    setFormValues((prev) => ({ ...prev, "Requested Items": updatedItems }));
+  };
+
+  const handleAddRequestItem = () => {
+    const currentItems: RequestItem[] = formValues["Requested Items"] || [];
+    const updatedItems = [
+      ...currentItems,
+      { product: "", price: 0, amount: 0 },
+    ];
+    setFormValues((prev) => ({ ...prev, "Requested Items": updatedItems }));
+  };
+
+  const handleRemoveRequestItem = (index: number) => {
+    const currentItems: RequestItem[] = formValues["Requested Items"] || [];
+    const updatedItems = currentItems.filter((_, i) => i !== index);
+    setFormValues((prev) => ({ ...prev, "Requested Items": updatedItems }));
+  };
+
+  // ----------------------------
+  // useEffect for default values
+  // ----------------------------
   useEffect(() => {
-    // Initialize nextApprover with an empty string by default
     let nextApprover = "";
     let currentStatus = "";
-
-    // If the workflow is loaded and there's a root item, get the first step.
     if (workflowState.rootItem) {
       const firstStep = workflowState.items[workflowState.rootItem];
       if (firstStep) {
@@ -112,7 +154,6 @@ const OrderRequestForm = () => {
         if (firstStep.nextApprover) nextApprover = firstStep.nextApprover;
       }
     }
-
     setFormValues((prev) => ({
       ...prev,
       "Request Creator": user.name,
@@ -120,9 +161,8 @@ const OrderRequestForm = () => {
       "Next Step Approver": nextApprover,
       "Request Created": getFormattedTodayDate("MM-DD-YYYY"),
     }));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Set the "Request Number" based on saved orders.
   useEffect(() => {
     const newRequestNumber =
       data && data.length > 0
@@ -141,24 +181,26 @@ const OrderRequestForm = () => {
   // ----------------------------
   const validateForm = () => {
     const newErrors: { [key: string]: boolean } = {};
-
-    // Validate workflow selection.
     if (!currentWorkflowName) {
       newErrors.workflow = true;
     }
-
-    // Validate all required fields.
-    // (Assumes that fields in schema have an "isRequired" property.)
     [...(schema || [])].forEach((field) => {
-      if (
-        !formValues[field.parameter] ||
-        formValues[field.parameter].toString().trim() === ""
-      ) {
-        if (field.isRequired && field.parameter !== "Request Status")
+      if (field.isRequired && field.parameter !== "Request Status") {
+        if (
+          field.type.toUpperCase() === FIELD_TYPES.ITEMS.toUpperCase() &&
+          (!Array.isArray(formValues[field.parameter]) ||
+            formValues[field.parameter].length === 0)
+        ) {
           newErrors[field.parameter] = true;
+        } else if (
+          field.type.toUpperCase() !== FIELD_TYPES.ITEMS.toUpperCase() &&
+          (!formValues[field.parameter] ||
+            formValues[field.parameter].toString().trim() === "")
+        ) {
+          newErrors[field.parameter] = true;
+        }
       }
     });
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -168,19 +210,16 @@ const OrderRequestForm = () => {
   // ----------------------------
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-
     if (!validateForm()) {
       console.log("Failed Validation!");
       return;
     }
-
     let firstStep = "";
     if (workflowSteps.length > 0) {
       firstStep = workflowSteps[0];
     } else if (state.rootItem && state.items[state.rootItem]) {
       firstStep = state.items[state.rootItem].name;
     }
-
     const newRow = {
       ...formValues,
       id: rowData ? rowData.length + 1 : 1,
@@ -189,7 +228,6 @@ const OrderRequestForm = () => {
         currentStep: firstStep,
       },
     };
-
     addRow(newRow);
     setFormValues({});
     setFormSubmitted(true);
@@ -198,18 +236,15 @@ const OrderRequestForm = () => {
   };
 
   useEffect(() => {
-    // Check that a workflow is selected and the workflow has been loaded.
     if (currentWorkflowName && workflowState.rootItem) {
-      // Retrieve the nextApprover value from the first step of the workflow.
       const nextApprover =
         workflowState.items[workflowState.rootItem]?.nextApprover || "";
-      // Update the form values with the retrieved Next Step Approver.
       setFormValues((prev) => ({
         ...prev,
         "Next Step Approver": nextApprover,
       }));
     }
-  }, [currentWorkflowName, workflowState, setFormValues]);
+  }, [currentWorkflowName, workflowState]);
 
   // ----------------------------
   // Rendering
@@ -219,44 +254,7 @@ const OrderRequestForm = () => {
       <RequestToast />
       <h2 className="text-lg font-bold mb-4">Create New Order Request</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Workflow Selector */}
-        <div className="flex items-center justify-between">
-          <div>
-            <Label htmlFor="workflow" className="font-medium text-sm">
-              Select Workflow
-              {errors.workflow && (
-                <span className="text-red-500 text-xs ml-2">* Required</span>
-              )}
-            </Label>
-
-            <Select
-              onValueChange={handleWorkflowChange}
-              value={currentWorkflowName || undefined}
-            >
-              <SelectTrigger
-                className={`w-full ${
-                  errors.workflow ? "border-red-500" : "border-gray-300"
-                }`}
-              >
-                <SelectValue placeholder="Select a workflow" />
-              </SelectTrigger>
-              <SelectContent>
-                {savedWorkflows.map((workflowName) => (
-                  <SelectItem key={workflowName} value={workflowName}>
-                    {workflowName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Link href="/request-tracker/workflow" passHref>
-            <Button className="bg-blue-800 text-white">
-              Create A New Workflow
-            </Button>
-          </Link>
-        </div>
-
+        {/* Removed the extra workflow selector here */}
         {/* Customer Specific Details Section */}
         <div>
           <h3 className="text-lg font-semibold mb-3">
@@ -275,30 +273,66 @@ const OrderRequestForm = () => {
                   !field.parameter.startsWith("Shipping Address:")
               )
               .map((field) => {
-                // For the Next Step Approver field, compute its default value.
-                const defaultNextApprover =
-                  formValues["Next Step Approver"] ||
-                  (workflowState.rootItem &&
-                    workflowState.items[workflowState.rootItem]
-                      ?.nextApprover) ||
-                  "";
+                // Render the "Request Workflow" field with dropdown functionality.
+                if (field.parameter === "Request Workflow") {
+                  return (
+                    <div key={field.id} className="space-y-2">
+                      <Label
+                        htmlFor={field.parameter}
+                        className="font-medium text-sm"
+                      >
+                        {field.parameter}
+                        {field.isRequired && (
+                          <span className="text-red-500 ml-1">*</span>
+                        )}
+                        {errors[field.parameter] && (
+                          <span className="text-red-500 text-xs ml-2">
+                            * Required
+                          </span>
+                        )}
+                      </Label>
+                      <Select
+                        value={currentWorkflowName || ""}
+                        onValueChange={(value) => handleWorkflowChange(value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select Workflow" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {savedWorkflows.map((workflowName) => (
+                            <SelectItem key={workflowName} value={workflowName}>
+                              {workflowName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                }
 
-                return (
-                  <div key={field.id} className="space-y-2">
-                    <Label
-                      htmlFor={field.parameter}
-                      className="font-medium text-sm"
-                    >
-                      {field.parameter}
-                      {errors[field.parameter] && field.isRequired && (
-                        <span className="text-red-500 text-xs ml-2">
-                          * Required
-                        </span>
-                      )}
-                    </Label>
-
-                    {field.parameter === "Next Step Approver" ? (
-                      // Render a dropdown for Next Step Approver with default value.
+                if (field.parameter === "Next Step Approver") {
+                  const defaultNextApprover =
+                    formValues["Next Step Approver"] ||
+                    (workflowState.rootItem &&
+                      workflowState.items[workflowState.rootItem]
+                        ?.nextApprover) ||
+                    "";
+                  return (
+                    <div key={field.id} className="space-y-2">
+                      <Label
+                        htmlFor={field.parameter}
+                        className="font-medium text-sm"
+                      >
+                        {field.parameter}
+                        {field.isRequired && (
+                          <span className="text-red-500 ml-1">*</span>
+                        )}
+                        {errors[field.parameter] && (
+                          <span className="text-red-500 text-xs ml-2">
+                            * Required
+                          </span>
+                        )}
+                      </Label>
                       <Select
                         value={defaultNextApprover}
                         onValueChange={(value) =>
@@ -316,9 +350,162 @@ const OrderRequestForm = () => {
                           ))}
                         </SelectContent>
                       </Select>
-                    ) : field.type.toUpperCase() ===
-                      FIELD_TYPES.DATE.toUpperCase() ? (
-                      // Render a DatePicker for date fields.
+                    </div>
+                  );
+                }
+
+                // Handle the ITEMS field (wrapped in a fieldset).
+                if (
+                  field.type.toUpperCase() === FIELD_TYPES.ITEMS.toUpperCase()
+                ) {
+                  const items: RequestItem[] =
+                    formValues[field.parameter] || [];
+                  return (
+                    <fieldset
+                      key={field.id}
+                      className="md:col-span-2 border p-4 rounded-md"
+                    >
+                      <legend className="px-2 font-semibold text-lg">
+                        {field.parameter}
+                        {field.isRequired && (
+                          <span className="text-red-500 ml-1">*</span>
+                        )}
+                        {errors[field.parameter] && (
+                          <span className="text-red-500 text-xs ml-2">
+                            * Required
+                          </span>
+                        )}
+                      </legend>
+                      {items.map((item, index) => (
+                        <div
+                          key={index}
+                          className="flex flex-col md:flex-row gap-2 mb-2 items-center"
+                        >
+                          {/* Product Dropdown */}
+                          <div className="flex-1">
+                            <Label className="text-sm">Product</Label>
+                            <Select
+                              value={item.product ? item.product : undefined}
+                              onValueChange={(value) => {
+                                const selectedProduct = PRODUCTS.find(
+                                  (prod) => prod.product === value
+                                );
+                                handleRequestItemChange(
+                                  index,
+                                  "product",
+                                  value
+                                );
+                                if (selectedProduct) {
+                                  // Auto-populate the Price when a product is selected.
+                                  handleRequestItemChange(
+                                    index,
+                                    "price",
+                                    selectedProduct.price
+                                  );
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select Product" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {PRODUCTS.map((prod) => (
+                                  <SelectItem
+                                    key={prod.product}
+                                    value={prod.product}
+                                  >
+                                    {prod.product}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Price Display (read-only and formatted as currency) */}
+                          <div className="flex-1">
+                            <Label className="text-sm">Price</Label>
+                            <div className="border rounded-md px-2 py-2 text-sm bg-gray-100">
+                              {new Intl.NumberFormat("en-US", {
+                                style: "currency",
+                                currency: "USD",
+                              }).format(item.price || 0)}
+                            </div>
+                          </div>
+                          {/* Amount Input */}
+                          <div className="flex-1">
+                            <Label className="text-sm">Amount</Label>
+                            <Input
+                              type="number"
+                              placeholder="Amount"
+                              value={item.amount}
+                              onChange={(e) =>
+                                handleRequestItemChange(
+                                  index,
+                                  "amount",
+                                  parseInt(e.target.value, 10)
+                                )
+                              }
+                            />
+                          </div>
+                          {/* Line Total Display */}
+                          <div className="flex-1">
+                            <Label className="text-sm">Line Total</Label>
+                            <div className="border rounded-md px-2 py-2 text-sm bg-gray-100">
+                              {new Intl.NumberFormat("en-US", {
+                                style: "currency",
+                                currency: "USD",
+                              }).format((item.price || 0) * (item.amount || 0))}
+                            </div>
+                          </div>
+                          <Button
+                            variant="destructive"
+                            type="button"
+                            onClick={() => handleRemoveRequestItem(index)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        onClick={handleAddRequestItem}
+                        className="mt-2"
+                      >
+                        Add Request Item
+                      </Button>
+                      {/* Total Amount Field */}
+                      <div className="mt-4">
+                        <Label className="text-sm">Total Amount</Label>
+                        <div className="border rounded-md px-2 py-2 text-sm bg-gray-100">
+                          {new Intl.NumberFormat("en-US", {
+                            style: "currency",
+                            currency: "USD",
+                          }).format(totalCost)}
+                        </div>
+                      </div>
+                    </fieldset>
+                  );
+                }
+
+                if (
+                  field.type.toUpperCase() === FIELD_TYPES.DATE.toUpperCase()
+                ) {
+                  return (
+                    <div key={field.id} className="space-y-2">
+                      <Label
+                        htmlFor={field.parameter}
+                        className="font-medium text-sm"
+                      >
+                        {field.parameter}
+                        {field.isRequired && (
+                          <span className="text-red-500 ml-1">*</span>
+                        )}
+                        {errors[field.parameter] && (
+                          <span className="text-red-500 text-xs ml-2">
+                            * Required
+                          </span>
+                        )}
+                      </Label>
                       <div className="relative">
                         <DatePicker
                           selected={
@@ -344,17 +531,34 @@ const OrderRequestForm = () => {
                           readOnly={field.readOnly}
                         />
                       </div>
-                    ) : (
-                      // Render a standard text input for all other fields.
-                      <Input
-                        type="text"
-                        readOnly={field.readOnly}
-                        value={formValues[field.parameter] ?? ""}
-                        onChange={(e) =>
-                          handleInputChange(field.parameter, e.target.value)
-                        }
-                      />
-                    )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={field.id} className="space-y-2">
+                    <Label
+                      htmlFor={field.parameter}
+                      className="font-medium text-sm"
+                    >
+                      {field.parameter}
+                      {field.isRequired && (
+                        <span className="text-red-500 ml-1">*</span>
+                      )}
+                      {errors[field.parameter] && (
+                        <span className="text-red-500 text-xs ml-2">
+                          * Required
+                        </span>
+                      )}
+                    </Label>
+                    <Input
+                      type="text"
+                      readOnly={field.readOnly}
+                      value={formValues[field.parameter] ?? ""}
+                      onChange={(e) =>
+                        handleInputChange(field.parameter, e.target.value)
+                      }
+                    />
                   </div>
                 );
               })}
@@ -364,7 +568,6 @@ const OrderRequestForm = () => {
         {/* Shipping Details Section */}
         <div className="bg-gray-50 p-4 rounded-md">
           <h3 className="text-lg font-semibold mb-3">Shipping Details</h3>
-          {/* POC Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {SHIPPING_FIELDS.filter((field) =>
               [
@@ -379,7 +582,10 @@ const OrderRequestForm = () => {
                   className="font-medium text-sm"
                 >
                   {field.parameter}
-                  {errors[field.parameter] && field.isRequired && (
+                  {field.isRequired && (
+                    <span className="text-red-500 ml-1">*</span>
+                  )}
+                  {errors[field.parameter] && (
                     <span className="text-red-500 text-xs ml-2">
                       * Required
                     </span>
@@ -395,7 +601,6 @@ const OrderRequestForm = () => {
               </div>
             ))}
           </div>
-          {/* Shipping Address Sub-Section */}
           <fieldset className="mt-4 border p-4 rounded-md">
             <legend className="px-2 font-semibold">Shipping Address</legend>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -408,7 +613,10 @@ const OrderRequestForm = () => {
                     className="font-medium text-sm"
                   >
                     {field.parameter.replace("Shipping Address: ", "")}
-                    {errors[field.parameter] && field.isRequired && (
+                    {field.isRequired && (
+                      <span className="text-red-500 ml-1">*</span>
+                    )}
+                    {errors[field.parameter] && (
                       <span className="text-red-500 text-xs ml-2">
                         * Required
                       </span>
