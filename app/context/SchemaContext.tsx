@@ -76,6 +76,8 @@ export const SchemaProvider: React.FC<{ children: ReactNode }> = ({
 
     if (savedRowData) {
       setRowDataState(JSON.parse(savedRowData));
+
+      console.log(JSON.parse(savedRowData));
     }
 
     if (savedColDefs) {

@@ -14,6 +14,7 @@ import { useWorkflow } from "@/app/context/WorkflowContext";
 import workflow from "@/app/workflow-engine/workflow";
 import { useUser } from "@/app/context/UserContext";
 import { AccessRole, USERS } from "@/app/constants"; // Import USERS here
+import RequestToast, { showToast } from "../Requests/RequestToast";
 
 const WorkflowComponent: React.FC = memo(() => {
   const {
@@ -82,10 +83,12 @@ const WorkflowComponent: React.FC = memo(() => {
   const handleSaveWorkflow = () => {
     if (currentWorkflowName) {
       saveWorkflow(currentWorkflowName);
-      alert("Workflow saved successfully!");
+      setTimeout(() => null, 2000);
+      showToast("Workflow Saved successfully", "success");
       getSavedWorkflows();
     } else {
-      alert("Workflow requires a name!");
+      setTimeout(() => null, 500);
+      showToast("Workflow Requires a Name!", "error");
     }
   };
 
@@ -96,7 +99,8 @@ const WorkflowComponent: React.FC = memo(() => {
       setWorkflowKey("");
       setWorkflowDescription("");
       setNewWorkflowName("");
-      alert("Workflow deleted successfully!");
+      setTimeout(() => null, 2000);
+      showToast("Workflow Deleted successfully", "success");
       setIsDeleteDialogOpen(false); // Close the dialog
     }
   };
@@ -113,7 +117,8 @@ const WorkflowComponent: React.FC = memo(() => {
 
   const handleAddItem = () => {
     if (!newItemName.trim()) {
-      alert("Item requires a name!");
+      setTimeout(() => null, 500);
+      showToast("Item Requires a Name!", "error");
       return;
     }
     console.log("handleAddItem called");
@@ -171,6 +176,7 @@ const WorkflowComponent: React.FC = memo(() => {
     if (newWorkflowName.trim()) {
       const newWorkflowState = {
         rootItem: undefined, // No root item initially
+        name: "New Workflow",
         items: {}, // Empty items list
         workflowKey: workflowKey.trim(),
         workflowDescription: workflowDescription.trim(),
@@ -379,15 +385,15 @@ const WorkflowComponent: React.FC = memo(() => {
           )}
         </div>
         <div className="flex flex-wrap space-x-2 mt-2">
-          {Object.keys(workflow.states[item.currentState].on).map((action) => (
-            <button
+          {/* {Object.keys(workflow.states[item.currentState].on).map((action) => (
+            <div
               key={action}
-              onClick={() => handleTransition(item.id, action)}
+              //onClick={() => handleTransition(item.id, action)}
               className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition whitespace-nowrap"
             >
               {action}
-            </button>
-          ))}
+            </div>
+          ))} */}
 
           {user.role !== AccessRole.USER && (
             <>
@@ -450,6 +456,7 @@ const WorkflowComponent: React.FC = memo(() => {
 
   return (
     <div className="p-6 mx-4 bg-slate-200 rounded-xl shadow-md space-y-4 ">
+      <RequestToast />
       {/* Delete Workflow Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>

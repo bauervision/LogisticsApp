@@ -1,8 +1,6 @@
-// components/TaskSheet.tsx
-
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Sheet,
   SheetTrigger,
@@ -10,27 +8,31 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { useSchema } from "@/app/context/SchemaContext";
+import { useUser } from "@/app/context/UserContext";
 
 const TaskSheet: React.FC = () => {
-  const [tasks, setTasks] = useState<
-    { id: number; name: string; details: string }[]
-  >([
-    { id: 1, name: "Task 1", details: "Details for Task 1" },
-    { id: 2, name: "Task 2", details: "Details for Task 2" },
-    { id: 3, name: "Task 3", details: "Details for Task 3" },
-    { id: 4, name: "Task 4", details: "Details for Task 4" },
-    { id: 5, name: "Task 5", details: "Details for Task 5" },
-    { id: 6, name: "Task 6", details: "Details for Task 6" },
-    { id: 7, name: "Task 7", details: "Details for Task 7" },
-    { id: 8, name: "Task 8", details: "Details for Task 8" },
-    { id: 9, name: "Task 9", details: "Details for Task 9" },
-    // Add more tasks as needed
-  ]);
+  // Pull rowData from your SchemaContext and user info from your UserContext.
+  const { rowData } = useSchema();
+  const { user } = useUser();
+
+  // Use local state for tasks, which will be filtered from rowData.
+  const [tasks, setTasks] = useState<{ [key: string]: any }[]>([]);
   const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleTaskClick = (taskId: number) => {
-    setExpandedTaskId((prev) => (prev === taskId ? null : taskId));
+  // Update tasks whenever rowData or user changes.
+  useEffect(() => {
+    if (rowData && user) {
+      const filteredTasks = rowData.filter(
+        (task: any) => task["Next Step Approver"] === user.name
+      );
+      setTasks(filteredTasks);
+    }
+  }, [rowData, user]);
+
+  const handleTaskClick = (taskIndex: number) => {
+    setExpandedTaskId((prev) => (prev === taskIndex ? null : taskIndex));
   };
 
   return (
@@ -50,18 +52,25 @@ const TaskSheet: React.FC = () => {
               style={{ maxHeight: "60vh", overflowY: "auto" }}
             >
               <ul className="space-y-2">
-                {tasks.map((task) => (
-                  <li key={task.id} className="border p-2 rounded">
+                {tasks.map((task, index) => (
+                  <li key={index} className="border p-2 rounded">
                     <Button
                       variant="outline"
-                      onClick={() => handleTaskClick(task.id)}
+                      onClick={() => handleTaskClick(index)}
                     >
-                      {task.name}
+                      {/* Display a title for the task. You can adjust this to show Request Number, Workflow name, etc. */}
+                      {task["Request Number"]
+                        ? `Request ${task["Request Number"]}`
+                        : task["Request Workflow"] || "Task"}
                     </Button>
-                    {expandedTaskId === task.id && (
+                    {expandedTaskId === index && (
                       <div className="mt-2 p-2 border rounded">
-                        <h3 className="text-lg font-bold">{task.name}</h3>
-                        <p>{task.details}</p>
+                        <h3 className="text-lg font-bold">
+                          {task["Request Workflow"] || "Task"}
+                        </h3>
+                        <p>
+                          {task.details || "No additional details provided."}
+                        </p>
                       </div>
                     )}
                   </li>

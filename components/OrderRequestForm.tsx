@@ -42,6 +42,7 @@ const OrderRequestForm = () => {
   const { schema, rowData } = useSchema();
   const {
     state,
+    dispatch,
     savedWorkflows,
     currentWorkflowName,
     setCurrentWorkflowName,
@@ -144,24 +145,40 @@ const OrderRequestForm = () => {
   // ----------------------------
   // useEffect for default values
   // ----------------------------
+
   useEffect(() => {
-    let nextApprover = "";
-    let currentStatus = "";
-    if (workflowState.rootItem) {
-      const firstStep = workflowState.items[workflowState.rootItem];
-      if (firstStep) {
-        currentStatus = firstStep.currentState;
-        if (firstStep.nextApprover) nextApprover = firstStep.nextApprover;
+    if (savedWorkflows && savedWorkflows.length === 1) {
+      const defaultWorkflow = savedWorkflows[0];
+      console.log(defaultWorkflow);
+      // Only update if not already set
+      if (currentWorkflowName !== defaultWorkflow) {
+        setCurrentWorkflowName(defaultWorkflow);
+        loadWorkflow(defaultWorkflow);
+        setFormValues((prev) => ({
+          ...prev,
+          "Request Workflow": defaultWorkflow,
+        }));
       }
     }
-    setFormValues((prev) => ({
-      ...prev,
-      "Request Creator": user.name,
-      "Request Status": currentStatus,
-      "Next Step Approver": nextApprover,
-      "Request Created": getFormattedTodayDate("MM-DD-YYYY"),
-    }));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [savedWorkflows]);
+
+  useEffect(() => {
+    if (workflowState.rootItem) {
+      const firstStep = workflowState.items[workflowState.rootItem];
+      console.log("First Step", firstStep);
+      const currentStatus = firstStep?.currentState || "";
+      const nextApprover = firstStep?.nextApprover || "";
+      setCurrentWorkflowName(workflowState.name);
+      setFormValues((prev) => ({
+        ...prev,
+        "Request Creator": user.name,
+        "Request Workflow": workflowState.name,
+        "Request Status": currentStatus,
+        "Next Step Approver": nextApprover,
+        "Request Created": getFormattedTodayDate("MM-DD-YYYY"),
+      }));
+    }
+  }, [workflowState]); // Now re-run when workflowState changes.
 
   useEffect(() => {
     const newRequestNumber =
@@ -181,9 +198,12 @@ const OrderRequestForm = () => {
   // ----------------------------
   const validateForm = () => {
     const newErrors: { [key: string]: boolean } = {};
-    if (!currentWorkflowName) {
-      newErrors.workflow = true;
+    if (!formValues["Request Workflow"]) {
+      newErrors["Request Workflow"] = true;
     }
+
+    console.log(currentWorkflowName);
+
     [...(schema || [])].forEach((field) => {
       if (field.isRequired && field.parameter !== "Request Status") {
         if (
@@ -202,6 +222,7 @@ const OrderRequestForm = () => {
       }
     });
     setErrors(newErrors);
+    console.log(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
@@ -235,17 +256,6 @@ const OrderRequestForm = () => {
     showToast("New Request Submitted successfully", "success");
   };
 
-  useEffect(() => {
-    if (currentWorkflowName && workflowState.rootItem) {
-      const nextApprover =
-        workflowState.items[workflowState.rootItem]?.nextApprover || "";
-      setFormValues((prev) => ({
-        ...prev,
-        "Next Step Approver": nextApprover,
-      }));
-    }
-  }, [currentWorkflowName, workflowState]);
-
   // ----------------------------
   // Rendering
   // ----------------------------
@@ -254,7 +264,6 @@ const OrderRequestForm = () => {
       <RequestToast />
       <h2 className="text-lg font-bold mb-4">Create New Order Request</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Removed the extra workflow selector here */}
         {/* Customer Specific Details Section */}
         <div>
           <h3 className="text-lg font-semibold mb-3">
@@ -283,11 +292,11 @@ const OrderRequestForm = () => {
                       >
                         {field.parameter}
                         {field.isRequired && (
-                          <span className="text-red-500 ml-1">*</span>
+                          <span className="text-blue-500 ml-1">*</span>
                         )}
                         {errors[field.parameter] && (
                           <span className="text-red-500 text-xs ml-2">
-                            * Required
+                            Required
                           </span>
                         )}
                       </Label>
@@ -325,19 +334,28 @@ const OrderRequestForm = () => {
                       >
                         {field.parameter}
                         {field.isRequired && (
-                          <span className="text-red-500 ml-1">*</span>
+                          <span className="text-blue-500 ml-1">*</span>
                         )}
                         {errors[field.parameter] && (
                           <span className="text-red-500 text-xs ml-2">
-                            * Required
+                            Required
                           </span>
                         )}
                       </Label>
                       <Select
                         value={defaultNextApprover}
-                        onValueChange={(value) =>
-                          handleInputChange(field.parameter, value)
-                        }
+                        onValueChange={(value) => {
+                          // Update local form state.
+                          handleInputChange(field.parameter, value);
+                          // Dispatch action to update the workflow state.
+                          if (workflowState.rootItem) {
+                            dispatch({
+                              type: "updateItem",
+                              itemId: workflowState.rootItem,
+                              data: { nextApprover: value },
+                            });
+                          }
+                        }}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select Next Step Approver" />
@@ -354,7 +372,7 @@ const OrderRequestForm = () => {
                   );
                 }
 
-                // Handle the ITEMS field (wrapped in a fieldset).
+                // Handle the ITEMS field
                 if (
                   field.type.toUpperCase() === FIELD_TYPES.ITEMS.toUpperCase()
                 ) {
@@ -368,7 +386,7 @@ const OrderRequestForm = () => {
                       <legend className="px-2 font-semibold text-lg">
                         {field.parameter}
                         {field.isRequired && (
-                          <span className="text-red-500 ml-1">*</span>
+                          <span className="text-blue-500 ml-1">*</span>
                         )}
                         {errors[field.parameter] && (
                           <span className="text-red-500 text-xs ml-2">
@@ -498,7 +516,7 @@ const OrderRequestForm = () => {
                       >
                         {field.parameter}
                         {field.isRequired && (
-                          <span className="text-red-500 ml-1">*</span>
+                          <span className="text-blue-500 ml-1">*</span>
                         )}
                         {errors[field.parameter] && (
                           <span className="text-red-500 text-xs ml-2">
@@ -543,7 +561,7 @@ const OrderRequestForm = () => {
                     >
                       {field.parameter}
                       {field.isRequired && (
-                        <span className="text-red-500 ml-1">*</span>
+                        <span className="text-blue-500 ml-1">*</span>
                       )}
                       {errors[field.parameter] && (
                         <span className="text-red-500 text-xs ml-2">
@@ -583,7 +601,7 @@ const OrderRequestForm = () => {
                 >
                   {field.parameter}
                   {field.isRequired && (
-                    <span className="text-red-500 ml-1">*</span>
+                    <span className="text-blue-500 ml-1">*</span>
                   )}
                   {errors[field.parameter] && (
                     <span className="text-red-500 text-xs ml-2">
@@ -614,7 +632,7 @@ const OrderRequestForm = () => {
                   >
                     {field.parameter.replace("Shipping Address: ", "")}
                     {field.isRequired && (
-                      <span className="text-red-500 ml-1">*</span>
+                      <span className="text-blue-500 ml-1">*</span>
                     )}
                     {errors[field.parameter] && (
                       <span className="text-red-500 text-xs ml-2">

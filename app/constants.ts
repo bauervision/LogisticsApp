@@ -201,12 +201,15 @@ export const USERS: User[] = [
   { name: "Jane Super", role: AccessRole.SUPER_ADMIN },
   { name: "Kara Admin", role: AccessRole.ADMIN },
   { name: "Dan User", role: AccessRole.USER },
+  { name: "Matt User", role: AccessRole.USER },
+  { name: "Terry User", role: AccessRole.USER },
   { name: "John Guest", role: AccessRole.GUEST },
 ];
 
 // In your WorkflowContext.tsx (or in a separate file you import here)
 export const DEFAULT_WORKFLOW: WorkflowState = {
   rootItem: "order-received",
+  name: "Default Workflow",
   items: {
     "order-received": {
       id: "order-received",

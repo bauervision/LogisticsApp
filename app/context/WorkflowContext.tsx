@@ -22,6 +22,7 @@ export interface WorkflowItemState {
 
 export interface WorkflowState {
   rootItem?: string; // Root item ID
+  name: string;
   items: Record<string, WorkflowItemState>; // Map of item IDs to their states
   workflowKey?: string; // Workflow key
   workflowDescription?: string; // Workflow description
@@ -30,6 +31,7 @@ export interface WorkflowState {
 // Define the default template workflow
 export const DEFAULT_WORKFLOW: WorkflowState = {
   rootItem: "order-received",
+  name: "New Order: Default",
   items: {
     "order-received": {
       id: "order-received",
@@ -356,6 +358,7 @@ export const WorkflowProvider = ({ children }: { children: ReactNode }) => {
         type: "loadWorkflow",
         workflowState: {
           rootItem: workflowState.rootItem,
+          name: workflowState.name,
           items: workflowState.items,
           workflowKey: workflowState.workflowKey || "",
           workflowDescription: workflowState.workflowDescription || "",
@@ -377,9 +380,10 @@ export const WorkflowProvider = ({ children }: { children: ReactNode }) => {
     return keys.map((key) => key.replace("workflow_", ""));
   };
 
-  // When the provider mounts, ensure the default workflow is saved
+  // When the provider mounts, ensure the default workflow is saved, and the current workflow name is set
   useEffect(() => {
     const defaultWorkflowName = "Default Template";
+    setCurrentWorkflowName("Default Template");
     if (!localStorage.getItem(`workflow_${defaultWorkflowName}`)) {
       saveWorkflow(defaultWorkflowName);
     }
