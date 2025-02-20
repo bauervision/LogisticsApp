@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import ReactJson from "react-json-view";
+
 import {
   Sheet,
   SheetTrigger,
@@ -10,18 +12,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { useSchema } from "@/app/context/SchemaContext";
 import { useUser } from "@/app/context/UserContext";
+import { useWorkflow } from "@/app/context/WorkflowContext";
 
 const TaskSheet: React.FC = () => {
-  // Pull rowData from your SchemaContext and user info from your UserContext.
-  const { rowData } = useSchema();
+  const { rowData, setRowData } = useSchema();
   const { user } = useUser();
+  const { state: workflowState } = useWorkflow();
 
-  // Use local state for tasks, which will be filtered from rowData.
-  const [tasks, setTasks] = useState<{ [key: string]: any }[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
   const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
-  // Update tasks whenever rowData or user changes.
+  // Filter rowData for tasks where "Next Step Approver" equals the current user.
   useEffect(() => {
     if (rowData && user) {
       const filteredTasks = rowData.filter(
@@ -31,8 +33,60 @@ const TaskSheet: React.FC = () => {
     }
   }, [rowData, user]);
 
-  const handleTaskClick = (taskIndex: number) => {
-    setExpandedTaskId((prev) => (prev === taskIndex ? null : taskIndex));
+  const handleTaskClick = (taskId: number) => {
+    setExpandedTaskId((prev) => (prev === taskId ? null : taskId));
+  };
+
+  // Approve will try to advance the request to the next step in the workflow.
+  const handleApprove = (task: any) => {
+    // Find the current workflow item by matching its name to the task's current step.
+    const currentWorkflowItem = Object.values(workflowState.items).find(
+      (item) => item.name === task.workflow.currentStep
+    );
+
+    if (!currentWorkflowItem) {
+      alert("Workflow step not found.");
+      return;
+    }
+
+    if (currentWorkflowItem.children.length > 0) {
+      // Get the next step (assuming the first child is the next step)
+      const nextItemId = currentWorkflowItem.children[0];
+      const nextItem = workflowState.items[nextItemId];
+
+      if (nextItem) {
+        // Update the task with the new workflow step, nextApprover, and updated request status.
+        const updatedTask = {
+          ...task,
+          workflow: {
+            ...task.workflow,
+            currentStep: nextItem.name,
+          },
+          "Next Step Approver": nextItem.nextApprover || "",
+          "Request Status": nextItem.name, // Update the status to the name of this step set in the workflow
+        };
+
+        if (rowData) {
+          const updatedRowData = rowData.map((r: any) =>
+            r.id === task.id ? updatedTask : r
+          );
+          setRowData(updatedRowData);
+          alert(
+            `Request approved. Moved to step: ${nextItem.name}. Next Approver: ${nextItem.nextApprover}. Status updated to: ${nextItem.currentState}`
+          );
+        }
+      } else {
+        alert("Next workflow step not found.");
+      }
+    } else {
+      alert("This request is already at the final step.");
+    }
+  };
+
+  // For now, Reject will simply alert the user.
+  const handleReject = (task: any) => {
+    alert("Request has been rejected.");
+    // Optionally, update task status or perform additional actions.
   };
 
   return (
@@ -52,25 +106,42 @@ const TaskSheet: React.FC = () => {
               style={{ maxHeight: "60vh", overflowY: "auto" }}
             >
               <ul className="space-y-2">
-                {tasks.map((task, index) => (
-                  <li key={index} className="border p-2 rounded">
+                {tasks.map((task) => (
+                  <li key={task.id} className="border p-2 rounded">
                     <Button
                       variant="outline"
-                      onClick={() => handleTaskClick(index)}
+                      onClick={() => handleTaskClick(task.id)}
                     >
-                      {/* Display a title for the task. You can adjust this to show Request Number, Workflow name, etc. */}
                       {task["Request Number"]
                         ? `Request ${task["Request Number"]}`
                         : task["Request Workflow"] || "Task"}
                     </Button>
-                    {expandedTaskId === index && (
+                    {expandedTaskId === task.id && (
                       <div className="mt-2 p-2 border rounded">
                         <h3 className="text-lg font-bold">
-                          {task["Request Workflow"] || "Task"}
+                          {task["Request Workflow"] || "Task Details"}
                         </h3>
-                        <p>
-                          {task.details || "No additional details provided."}
-                        </p>
+                        <ReactJson
+                          src={task}
+                          name={false}
+                          collapsed={true}
+                          enableClipboard={false}
+                          displayDataTypes={false}
+                        />
+                        <div className="mt-2 flex space-x-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => handleApprove(task)}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={() => handleReject(task)}
+                          >
+                            Reject
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </li>

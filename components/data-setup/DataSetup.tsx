@@ -23,6 +23,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import RequestToast, { showToast } from "../Requests/RequestToast";
 
 const DataSetup: React.FC = () => {
   const {
@@ -57,7 +58,8 @@ const DataSetup: React.FC = () => {
     });
     setColDefs(completeColDefs);
 
-    alert("Schema saved successfully!");
+    setTimeout(() => null, 1000);
+    showToast("Schema Saved successfully", "success");
   };
 
   const handleAddField = () => {
@@ -105,6 +107,7 @@ const DataSetup: React.FC = () => {
 
   return (
     <div className="bg-gray-100 w-full flex flex-col h-full">
+      <RequestToast />
       <header className="bg-white shadow p-6">
         <h2 className="text-2xl font-semibold text-center">
           Catēna Data Configuration

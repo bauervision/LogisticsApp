@@ -107,3 +107,7 @@
     rgba(160, 160, 160, 1) 100%
   );
 }
+
+.completed-row {
+  background-color: #d4edda !important; /* A light green background */
+}

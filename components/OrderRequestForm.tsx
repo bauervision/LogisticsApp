@@ -166,7 +166,7 @@ const OrderRequestForm = () => {
     if (workflowState.rootItem) {
       const firstStep = workflowState.items[workflowState.rootItem];
       console.log("First Step", firstStep);
-      const currentStatus = firstStep?.currentState || "";
+      const currentStatus = firstStep?.name || "Draft";
       const nextApprover = firstStep?.nextApprover || "";
       setCurrentWorkflowName(workflowState.name);
       setFormValues((prev) => ({
@@ -201,8 +201,6 @@ const OrderRequestForm = () => {
     if (!formValues["Request Workflow"]) {
       newErrors["Request Workflow"] = true;
     }
-
-    console.log(currentWorkflowName);
 
     [...(schema || [])].forEach((field) => {
       if (field.isRequired && field.parameter !== "Request Status") {
