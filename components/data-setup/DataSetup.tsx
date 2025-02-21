@@ -199,8 +199,6 @@ const DataSetup: React.FC = () => {
                         </select>
                       </div>
                     )}
-
-                    {/* No delete button for built-in fields */}
                   </div>
                 ))}
               </fieldset>

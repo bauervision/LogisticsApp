@@ -63,6 +63,7 @@ const TaskSheet: React.FC = () => {
             currentStep: nextItem.name,
           },
           "Next Step Approver": nextItem.nextApprover || "",
+          "Previous Approver": user.name,
           "Request Status": nextItem.name, // Update the status to the name of this step set in the workflow
         };
 
@@ -72,7 +73,7 @@ const TaskSheet: React.FC = () => {
           );
           setRowData(updatedRowData);
           alert(
-            `Request approved. Moved to step: ${nextItem.name}. Next Approver: ${nextItem.nextApprover}. Status updated to: ${nextItem.currentState}`
+            `Request approved. Moved to step: ${nextItem.name}. Prev Approver: ${nextItem.prevApprover}, Next Approver: ${nextItem.nextApprover}.`
           );
         }
       } else {
@@ -85,8 +86,49 @@ const TaskSheet: React.FC = () => {
 
   // For now, Reject will simply alert the user.
   const handleReject = (task: any) => {
-    alert("Request has been rejected.");
-    // Optionally, update task status or perform additional actions.
+    // Find the current workflow item by matching its name to the task's current step.
+    const currentWorkflowItem = Object.values(workflowState.items).find(
+      (item: any) => item.name === task.workflow.currentStep
+    );
+
+    if (!currentWorkflowItem) {
+      alert("Current workflow step not found.");
+      return;
+    }
+
+    // Find the parent workflow item by looking for an item whose children array includes the current workflow item's id.
+    const parentWorkflowItem = Object.values(workflowState.items).find(
+      (item: any) =>
+        item.children && item.children.includes(currentWorkflowItem.id)
+    );
+
+    if (!parentWorkflowItem) {
+      alert("Cannot reject request. Already at the initial step.");
+      return;
+    }
+
+    // Update the task to move it back one step.
+    // Assign the previous approver to be the new next approver.
+    const updatedTask = {
+      ...task,
+      workflow: {
+        ...task.workflow,
+        currentStep: parentWorkflowItem.name,
+      },
+      "Next Step Approver": task["Previous Approver"],
+      "Previous Approver": user.name,
+      "Request Status": parentWorkflowItem.name,
+    };
+
+    if (rowData) {
+      const updatedRowData = rowData.map((r: any) =>
+        r.id === task.id ? updatedTask : r
+      );
+      setRowData(updatedRowData);
+      alert(
+        `Request rejected. Moved back to step: ${parentWorkflowItem.name}. Next Approver: ${task["Previous Approver"]}.`
+      );
+    }
   };
 
   return (

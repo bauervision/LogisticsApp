@@ -24,8 +24,16 @@ const getWorkflowProgress = (row: any): string => {
   // Prefer a workflow object if available; otherwise use the fields directly.
   const workflowName = row.workflow?.name || row["Request Workflow"];
   const currentStep = row.workflow?.currentStep || row["Request Status"];
-  if (workflowName && workflowMapping[workflowName]) {
-    const steps = workflowMapping[workflowName];
+
+  // Try to get the ordered steps from the row.
+  // This property should be saved with the row when the request is created.
+  const steps: string[] =
+    (row.workflow && row.workflow.orderedSteps) ||
+    // fallback to a default mapping if needed
+    workflowMapping[workflowName] ||
+    [];
+
+  if (steps.length > 0) {
     const totalSteps = steps.length;
     const currentIndex = steps.findIndex((step) => step === currentStep);
     if (currentIndex === -1) return workflowName;

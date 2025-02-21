@@ -20,7 +20,19 @@ import { format, parse } from "date-fns";
 import Link from "next/link";
 import RequestToast, { showToast } from "./Requests/RequestToast";
 import { useUser } from "@/app/context/UserContext";
-import { FIELD_TYPES, USERS, SHIPPING_FIELDS, PRODUCTS } from "@/app/constants";
+import {
+  FIELD_TYPES,
+  USERS,
+  SHIPPING_FIELDS,
+  PRODUCTS,
+  US_STATES,
+} from "@/app/constants";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 
 // Date formats mapping.
 const DATE_FORMATS: { [key: string]: string } = {
@@ -168,6 +180,7 @@ const OrderRequestForm = () => {
       console.log("First Step", firstStep);
       const currentStatus = firstStep?.name || "Draft";
       const nextApprover = firstStep?.nextApprover || "";
+
       setCurrentWorkflowName(workflowState.name);
       setFormValues((prev) => ({
         ...prev,
@@ -175,6 +188,7 @@ const OrderRequestForm = () => {
         "Request Workflow": workflowState.name,
         "Request Status": currentStatus,
         "Next Step Approver": nextApprover,
+        "Previous Approver": user.name,
         "Request Created": getFormattedTodayDate("MM-DD-YYYY"),
       }));
     }
@@ -245,8 +259,10 @@ const OrderRequestForm = () => {
       workflow: {
         name: currentWorkflowName,
         currentStep: firstStep,
+        orderedSteps: workflowSteps,
       },
     };
+
     addRow(newRow);
     setFormValues({});
     setFormSubmitted(true);
@@ -622,31 +638,71 @@ const OrderRequestForm = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {SHIPPING_FIELDS.filter((field) =>
                 field.parameter.startsWith("Shipping Address:")
-              ).map((field) => (
-                <div key={field.id} className="space-y-2">
-                  <Label
-                    htmlFor={field.parameter}
-                    className="font-medium text-sm"
-                  >
-                    {field.parameter.replace("Shipping Address: ", "")}
-                    {field.isRequired && (
-                      <span className="text-blue-500 ml-1">*</span>
-                    )}
-                    {errors[field.parameter] && (
-                      <span className="text-red-500 text-xs ml-2">
-                        * Required
-                      </span>
-                    )}
-                  </Label>
-                  <Input
-                    type="text"
-                    value={formValues[field.parameter] ?? ""}
-                    onChange={(e) =>
-                      handleInputChange(field.parameter, e.target.value)
-                    }
-                  />
-                </div>
-              ))}
+              ).map((field) => {
+                if (field.parameter === "Shipping Address: State") {
+                  return (
+                    <div key={field.id} className="space-y-2">
+                      <Label
+                        htmlFor={field.parameter}
+                        className="font-medium text-sm"
+                      >
+                        {field.parameter.replace("Shipping Address: ", "")}
+                        {field.isRequired && (
+                          <span className="text-blue-500 ml-1">*</span>
+                        )}
+                        {errors[field.parameter] && (
+                          <span className="text-red-500 text-xs ml-2">
+                            * Required
+                          </span>
+                        )}
+                      </Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="w-full border rounded-md px-2 py-2 text-sm text-left">
+                          {formValues[field.parameter] || "Select a State"}
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          {US_STATES.map((state) => (
+                            <DropdownMenuItem
+                              key={state}
+                              onSelect={() =>
+                                handleInputChange(field.parameter, state)
+                              }
+                            >
+                              {state}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  );
+                }
+                // Render a normal text input for other Shipping Address fields.
+                return (
+                  <div key={field.id} className="space-y-2">
+                    <Label
+                      htmlFor={field.parameter}
+                      className="font-medium text-sm"
+                    >
+                      {field.parameter.replace("Shipping Address: ", "")}
+                      {field.isRequired && (
+                        <span className="text-blue-500 ml-1">*</span>
+                      )}
+                      {errors[field.parameter] && (
+                        <span className="text-red-500 text-xs ml-2">
+                          * Required
+                        </span>
+                      )}
+                    </Label>
+                    <Input
+                      type="text"
+                      value={formValues[field.parameter] ?? ""}
+                      onChange={(e) =>
+                        handleInputChange(field.parameter, e.target.value)
+                      }
+                    />
+                  </div>
+                );
+              })}
             </div>
           </fieldset>
         </div>

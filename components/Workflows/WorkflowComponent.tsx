@@ -364,15 +364,15 @@ const WorkflowComponent: React.FC = memo(() => {
             className="p-2 border border-gray-300 rounded-md"
           />
           <p className="text-lg">
-            Current State:{" "}
-            <span className="font-semibold">{item.currentState}</span>
             {/* If nextApprover is set, display it */}
-            {item.nextApprover && (
+            {item.nextApprover ? (
               <>
                 {" "}
                 - Next Approver:{" "}
                 <span className="font-semibold">{item.nextApprover}</span>
               </>
+            ) : (
+              <>Needs Approver Assigned</>
             )}
           </p>
           {showSaveName && (
@@ -502,19 +502,6 @@ const WorkflowComponent: React.FC = memo(() => {
                 type="text"
                 value={editData.name || ""}
                 onChange={(e) => handleEditChange("name", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Current State
-              </label>
-              <input
-                type="text"
-                value={editData.currentState || ""}
-                onChange={(e) =>
-                  handleEditChange("currentState", e.target.value)
-                }
                 className="w-full border border-gray-300 rounded-lg p-2"
               />
             </div>

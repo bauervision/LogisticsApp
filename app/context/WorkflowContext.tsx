@@ -10,61 +10,23 @@ import React, {
   useEffect,
 } from "react";
 import workflow from "../workflow-engine/workflow";
+import { DEFAULT_WORKFLOW } from "../constants";
 
-// Updated interface to include nextApprover
 export interface WorkflowItemState {
   id: string;
   name: string;
-  currentState: string;
-  children: string[]; // Store child IDs
-  nextApprover?: string; // New property for the Next Approver
+  children: string[];
+  nextApprover?: string;
+  prevApprover?: string;
 }
 
 export interface WorkflowState {
-  rootItem?: string; // Root item ID
+  rootItem?: string;
   name: string;
   items: Record<string, WorkflowItemState>; // Map of item IDs to their states
-  workflowKey?: string; // Workflow key
-  workflowDescription?: string; // Workflow description
+  workflowKey?: string;
+  workflowDescription?: string;
 }
-
-// Define the default template workflow
-export const DEFAULT_WORKFLOW: WorkflowState = {
-  rootItem: "order-received",
-  name: "New Order: Default",
-  items: {
-    "order-received": {
-      id: "order-received",
-      name: "Order Received",
-      currentState: "draft",
-      children: ["sourcing"],
-      nextApprover: undefined,
-    },
-    sourcing: {
-      id: "sourcing",
-      name: "Sourcing",
-      currentState: "draft",
-      children: ["purchasing"],
-      nextApprover: undefined,
-    },
-    purchasing: {
-      id: "purchasing",
-      name: "Purchasing",
-      currentState: "draft",
-      children: ["order-complete"],
-      nextApprover: undefined,
-    },
-    "order-complete": {
-      id: "order-complete",
-      name: "Order Complete",
-      currentState: "draft",
-      children: [],
-      nextApprover: undefined,
-    },
-  },
-  workflowKey: "default",
-  workflowDescription: "Default Template Workflow",
-};
 
 interface InitializeAction {
   type: "initialize";
@@ -161,9 +123,8 @@ const workflowReducer = (
       const newItem: WorkflowItemState = {
         id: action.itemId,
         name: action.name,
-        currentState: workflow.initialState,
         children: [],
-        nextApprover: undefined,
+        nextApprover: "",
       };
 
       if (!state.rootItem) {
@@ -201,32 +162,14 @@ const workflowReducer = (
       }
     }
 
-    case "transition": {
-      const currentItem = state.items[action.itemId];
-      if (!currentItem) return state;
-      const transitions = workflow.states[currentItem.currentState]?.on;
-      if (!transitions || !transitions[action.action]) return state;
-      return {
-        ...state,
-        items: {
-          ...state.items,
-          [action.itemId]: {
-            ...currentItem,
-            currentState: transitions[action.action],
-          },
-        },
-      };
-    }
-
     case "insertAfter": {
       const parentItem = state.items[action.itemId];
       if (!parentItem) return state;
       const newItem: WorkflowItemState = {
         id: action.newItemId,
         name: action.name,
-        currentState: "draft",
         children: [],
-        nextApprover: undefined,
+        nextApprover: "",
       };
       return {
         ...state,
