@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { ColDef, SchemaItem } from "@/app/context/SchemaContext";
-
 import { SchemaContent } from "./SchemaContent";
 import { CSVParser } from "./CSVParser";
 import { AGGrid } from "./AGGrid";
@@ -38,25 +37,29 @@ const DataSetup: React.FC = () => {
 
   const [mode, setMode] = useState<"csv" | "manual">("csv");
 
-  // Prepopulate manual schema with built‑in fields
+  // Prepopulate manual schema with built‑in fields and additional fields.
+  // When adding a new field, we now set isHidden to false by default.
   const [manualSchema, setManualSchema] = useState<SchemaItem[]>([
     ...PRESET_FIELDS,
     ...SHIPPING_FIELDS,
   ]);
 
-  // When saving in manual mode, simply use the manual schema
+  // When saving in manual mode, simply use the manual schema.
   const handleSaveManualSchema = () => {
     setSchema(manualSchema);
 
-    // Update AGGrid column definitions using the manual schema.
-    const completeColDefs = manualSchema.map((field): ColDef => {
-      const parameter: string = field.parameter || "";
-      return {
-        headerName: parameter,
-        field: parameter,
-      };
-    });
+    // Update AGGrid column definitions using only fields that are not hidden.
+    const completeColDefs: ColDef[] = manualSchema
+      .filter((field) => !field.isHidden)
+      .map((field): ColDef => {
+        const parameter: string = field.parameter || "";
+        return {
+          headerName: parameter,
+          field: parameter,
+        };
+      });
     setColDefs(completeColDefs);
+    console.log(completeColDefs);
 
     setTimeout(() => null, 1000);
     showToast("Schema Saved successfully", "success");
@@ -70,6 +73,7 @@ const DataSetup: React.FC = () => {
       defaultField: false,
       isRequired: false,
       readOnly: false,
+      isHidden: false, // New: default to visible
     };
     setManualSchema((prev) => [...prev, newField]);
   };
@@ -80,10 +84,11 @@ const DataSetup: React.FC = () => {
     );
   };
 
+  // Allow value to be a string or boolean.
   const handleUpdateField = (
     id: string,
     key: keyof SchemaItem,
-    value: string
+    value: string | boolean
   ) => {
     setManualSchema((prev) =>
       prev.map((field) =>
@@ -139,7 +144,7 @@ const DataSetup: React.FC = () => {
           <>
             <section className="bg-white p-6 shadow rounded-lg">
               <h3 className="text-lg font-semibold mb-4">Define Schema</h3>
-              <h4 className="text-sm  mb-4">
+              <h4 className="text-sm mb-4">
                 These are default Catena Request fields and cannot be altered.
                 They are presented here for your awareness. Feel free to add any
                 custom fields in the Additional Details section.
@@ -153,7 +158,6 @@ const DataSetup: React.FC = () => {
                     key={field.id}
                     className="flex items-center gap-4 w-full mb-2"
                   >
-                    {/* Parameter Name Input (read-only) */}
                     <Input
                       className="flex-grow"
                       placeholder="Field Name"
@@ -161,8 +165,22 @@ const DataSetup: React.FC = () => {
                       readOnly
                       disabled
                     />
-
-                    {/* Type Dropdown (disabled) */}
+                    {/* Checkbox for Hidden Field */}
+                    <div className="flex items-center">
+                      <label className="mr-2 text-sm">Hidden</label>
+                      <input
+                        type="checkbox"
+                        title="When checked, this field will be hidden from the table view, but it will still exist in the data."
+                        checked={field.isHidden || false}
+                        onChange={(e) =>
+                          handleUpdateField(
+                            field.id.toString(),
+                            "isHidden",
+                            e.target.checked
+                          )
+                        }
+                      />
+                    </div>
                     <Select disabled value={field.type}>
                       <SelectTrigger className="w-1/4">
                         <SelectValue placeholder="Select Type">
@@ -179,8 +197,6 @@ const DataSetup: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
-
-                    {/* Conditional Date Format Dropdown (disabled) */}
                     {field.type === FIELD_TYPES.DATE && (
                       <div className="ml-3">
                         <select
@@ -213,7 +229,6 @@ const DataSetup: React.FC = () => {
                     key={field.id}
                     className="flex items-center gap-4 w-full mb-2"
                   >
-                    {/* Parameter Name Input (editable) */}
                     <Input
                       className="flex-grow"
                       placeholder="Field Name"
@@ -226,8 +241,6 @@ const DataSetup: React.FC = () => {
                         )
                       }
                     />
-
-                    {/* Type Dropdown (editable) */}
                     <Select
                       onValueChange={(value) =>
                         handleUpdateField(field.id.toString(), "type", value)
@@ -249,8 +262,6 @@ const DataSetup: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
-
-                    {/* Conditional Date Format Dropdown (editable) */}
                     {field.type === FIELD_TYPES.DATE && (
                       <div className="ml-3">
                         <select
@@ -276,7 +287,21 @@ const DataSetup: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Delete Button for additional fields */}
+                    {/* Checkbox for Hidden Field */}
+                    <div className="flex items-center">
+                      <label className="mr-2 text-sm">Hidden</label>
+                      <input
+                        type="checkbox"
+                        checked={field.isHidden || false}
+                        onChange={(e) =>
+                          handleUpdateField(
+                            field.id.toString(),
+                            "isHidden",
+                            e.target.checked
+                          )
+                        }
+                      />
+                    </div>
                     <Button
                       variant="outline"
                       onClick={() => handleRemoveField(field.id.toString())}
@@ -322,39 +347,6 @@ const DataSetup: React.FC = () => {
                 setSchema={setSchema}
               />
             </section>
-
-            {/* Schema and Data Table */}
-            {schema && schema.length > 0 && (
-              <>
-                <section className="bg-white p-6 shadow rounded-lg mt-8">
-                  <SchemaContent
-                    currentHeaders={colDefs || undefined}
-                    list={
-                      schema.filter(
-                        (item) => item.parameter !== "Request Status"
-                      ) || []
-                    }
-                    handleDelete={(id) =>
-                      setSchema(schema.filter((item) => item.id !== id))
-                    }
-                    handleSavingDataset={() => alert("Schema saved!")}
-                    handleHeaderUpdateType={() => {}}
-                    handleHeaderUpdateParameter={() => {}}
-                  />
-                </section>
-              </>
-            )}
-
-            {rowData && colDefs && (
-              <section className="bg-white mt-8 p-6 shadow rounded-lg flex-grow w-full">
-                <AGGrid
-                  rows={rowData}
-                  columns={colDefs}
-                  setHeight="600px"
-                  paginate={true}
-                />
-              </section>
-            )}
           </>
         )}
       </main>

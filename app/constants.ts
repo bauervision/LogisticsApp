@@ -38,6 +38,7 @@ export const PRESET_FIELDS = [
     isRequired: true,
     readOnly: false,
     defaultField: true,
+    isHidden: false,
   },
   {
     id: "requestCreated",
@@ -47,6 +48,7 @@ export const PRESET_FIELDS = [
     isRequired: true,
     readOnly: true,
     defaultField: true,
+    isHidden: false,
   },
   {
     id: "requestCreator",
@@ -55,6 +57,7 @@ export const PRESET_FIELDS = [
     isRequired: true,
     readOnly: true,
     defaultField: true,
+    isHidden: false,
   },
   {
     id: "requestNextApprover",
@@ -63,6 +66,7 @@ export const PRESET_FIELDS = [
     isRequired: true,
     readOnly: false,
     defaultField: true,
+    isHidden: false,
   },
   {
     id: "requestPrevApprover",
@@ -71,6 +75,7 @@ export const PRESET_FIELDS = [
     isRequired: true,
     readOnly: false,
     defaultField: true,
+    isHidden: true,
   },
   {
     id: "requestNumber",
@@ -79,6 +84,7 @@ export const PRESET_FIELDS = [
     isRequired: true,
     readOnly: false,
     defaultField: true,
+    isHidden: false,
   },
   {
     id: "requestStatus",
@@ -87,6 +93,7 @@ export const PRESET_FIELDS = [
     isRequired: true,
     readOnly: false,
     defaultField: true,
+    isHidden: false,
   },
   {
     id: "contractNumber",
@@ -95,6 +102,7 @@ export const PRESET_FIELDS = [
     isRequired: true,
     readOnly: false,
     defaultField: true,
+    isHidden: false,
   },
   {
     id: "description",
@@ -103,6 +111,7 @@ export const PRESET_FIELDS = [
     isRequired: false,
     readOnly: false,
     defaultField: true,
+    isHidden: true,
   },
   {
     id: "requestedAwardDate",
@@ -112,6 +121,7 @@ export const PRESET_FIELDS = [
     isRequired: true,
     readOnly: false,
     defaultField: true,
+    isHidden: false,
   },
   {
     id: "requestedItems",
@@ -120,6 +130,7 @@ export const PRESET_FIELDS = [
     isRequired: true,
     readOnly: false,
     defaultField: true,
+    isHidden: true,
   },
 ];
 
@@ -131,6 +142,7 @@ export const SHIPPING_FIELDS = [
     isRequired: true,
     readOnly: false,
     defaultField: true,
+    isHidden: false,
   },
   {
     id: "customerPOCEmail",
@@ -139,6 +151,7 @@ export const SHIPPING_FIELDS = [
     isRequired: true,
     readOnly: false,
     defaultField: true,
+    isHidden: true,
   },
   {
     id: "attentionTo",
@@ -147,6 +160,7 @@ export const SHIPPING_FIELDS = [
     isRequired: false,
     readOnly: false,
     defaultField: true,
+    isHidden: true,
   },
   {
     id: "shippingStreetAddress1",
@@ -155,6 +169,7 @@ export const SHIPPING_FIELDS = [
     isRequired: true,
     readOnly: false,
     defaultField: true,
+    isHidden: true,
   },
   {
     id: "shippingStreetAddress2",
@@ -163,6 +178,7 @@ export const SHIPPING_FIELDS = [
     isRequired: false,
     readOnly: false,
     defaultField: true,
+    isHidden: true,
   },
   {
     id: "shippingAddressCity",
@@ -171,6 +187,7 @@ export const SHIPPING_FIELDS = [
     isRequired: true,
     readOnly: false,
     defaultField: true,
+    isHidden: true,
   },
   {
     id: "shippingAddressState",
@@ -179,6 +196,7 @@ export const SHIPPING_FIELDS = [
     isRequired: true,
     readOnly: false,
     defaultField: true,
+    isHidden: true,
   },
   {
     id: "shippingAddressZipcode",
@@ -187,6 +205,7 @@ export const SHIPPING_FIELDS = [
     isRequired: true,
     readOnly: false,
     defaultField: true,
+    isHidden: true,
   },
 ];
 

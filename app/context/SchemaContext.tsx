@@ -24,6 +24,7 @@ export interface SchemaItem {
   readOnly: boolean;
   isRequired: boolean;
   defaultField: boolean;
+  isHidden: boolean;
 }
 
 export type Schema = SchemaItem[];
@@ -93,26 +94,29 @@ export const SchemaProvider: React.FC<{ children: ReactNode }> = ({
       return;
     }
 
-    const updatedColDefs: ColDef[] = newSchema.map((item) => ({
-      field: item.parameter || "",
-      filter:
-        item.type === "DATE"
-          ? "agDateColumnFilter"
-          : item.type === "NUMBER" ||
-            item.type === "FLOAT" ||
-            item.type === "CURRENCY"
-          ? "agNumberColumnFilter"
-          : "agTextColumnFilter",
-      ...(item.type === "CURRENCY" && {
-        valueFormatter: (params) =>
-          params.value
-            ? new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-              }).format(params.value)
-            : "",
-      }),
-    }));
+    const updatedColDefs: ColDef[] = newSchema
+      .filter((item) => !item.isHidden) // Filter out hidden fields
+      .map((item) => ({
+        headerName: item.parameter || "",
+        field: item.parameter || "",
+        filter:
+          item.type === "DATE"
+            ? "agDateColumnFilter"
+            : item.type === "NUMBER" ||
+              item.type === "FLOAT" ||
+              item.type === "CURRENCY"
+            ? "agNumberColumnFilter"
+            : "agTextColumnFilter",
+        ...(item.type === "CURRENCY" && {
+          valueFormatter: (params) =>
+            params.value
+              ? new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                }).format(params.value)
+              : "",
+        }),
+      }));
 
     setColDefsState(updatedColDefs);
     localStorage.setItem(COL_DEFS_STORAGE_KEY, JSON.stringify(updatedColDefs));

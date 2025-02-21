@@ -25,6 +25,7 @@ import {
 } from "@/app/request-tracker/requestTrackerData";
 import { handleLinkClick } from "@/app/utils/trackLinkClicks";
 import { useUser } from "@/app/context/UserContext";
+import { AccessRole } from "@/app/constants";
 
 const data = {
   navMain: [
@@ -66,7 +67,7 @@ export function SideBar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Filter out specific elements in adminData if the user role is not 'admin'
   const filteredAdminData =
-    user.role === "admin"
+    user.role === AccessRole.ADMIN || user.role === AccessRole.SUPER_ADMIN
       ? adminData
       : adminData.filter((item) => item.title === "Account Information");
 
