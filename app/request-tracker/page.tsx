@@ -1,8 +1,6 @@
 "use client";
 
 import GridTable from "@/components/ag-grid-table/GridTable";
-import { RequestDialog } from "@/components/Requests/RequestDialog";
-import { RequestDrawer } from "@/components/Requests/RequestDrawer";
 
 import React from "react";
 
@@ -38,7 +36,17 @@ function RequestPage() {
             </Button>
           </Link>
         ),
-        selectedRow && <RequestDialog />,
+        selectedRow && (
+          <Link href={`/request-tracker/${selectedRow?.id}`}>
+            <Button
+              variant="outline"
+              className="bg-blue-800 text-white"
+              onClick={() => console.log(selectedRow)}
+            >
+              View Request
+            </Button>
+          </Link>
+        ),
         <TaskSheet />,
       ]}
     >

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useSchema } from "@/app/context/SchemaContext";
+import { SchemaItem, useSchema } from "@/app/context/SchemaContext";
 import { useWorkflow } from "@/app/context/WorkflowContext";
 import { useRequestContext } from "@/app/context/DataContext";
 import { Input } from "@/components/ui/input";
@@ -152,6 +152,14 @@ const OrderRequestForm = () => {
     const currentItems: RequestItem[] = formValues["Requested Items"] || [];
     const updatedItems = currentItems.filter((_, i) => i !== index);
     setFormValues((prev) => ({ ...prev, "Requested Items": updatedItems }));
+  };
+
+  const handleDocuments = (
+    id: string,
+    key: keyof SchemaItem,
+    value: string | boolean | string[]
+  ) => {
+    setFormValues((prev) => ({ ...prev, Documents: value }));
   };
 
   // ----------------------------
@@ -386,6 +394,59 @@ const OrderRequestForm = () => {
                   );
                 }
 
+                /* Document upload */
+                if (
+                  field.type.toUpperCase() ===
+                  FIELD_TYPES.DOCUMENTS.toUpperCase()
+                ) {
+                  return (
+                    <fieldset
+                      key={field.id}
+                      className="md:col-span-2 border p-4 rounded-md"
+                    >
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor={field.parameter}
+                          className="font-medium text-sm pr-3"
+                        >
+                          {field.parameter}
+                          {field.isRequired && (
+                            <span className="text-blue-500 ml-1">*</span>
+                          )}
+                          {errors[field.parameter] && (
+                            <span className="text-red-500 text-xs ml-2">
+                              Required
+                            </span>
+                          )}
+                        </Label>
+                        <input
+                          type="file"
+                          multiple
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            if (files) {
+                              const fileNames = Array.from(files).map(
+                                (file) => file.name
+                              );
+                              // Update the field with the selected file names
+                              handleDocuments(
+                                field.id.toString(),
+                                "fileNames",
+                                fileNames
+                              );
+                            }
+                          }}
+                        />
+                        {field.fileNames && field.fileNames.length > 0 && (
+                          <div>
+                            <p>Selected files: {field.fileNames.join(", ")}</p>
+                          </div>
+                        )}
+                      </div>
+                    </fieldset>
+                  );
+                }
+
                 // Handle the ITEMS field
                 if (
                   field.type.toUpperCase() === FIELD_TYPES.ITEMS.toUpperCase()
@@ -408,6 +469,8 @@ const OrderRequestForm = () => {
                           </span>
                         )}
                       </legend>
+
+                      {/* Ordered Items */}
                       {items.map((item, index) => (
                         <div
                           key={index}

@@ -25,6 +25,7 @@ export interface SchemaItem {
   isRequired: boolean;
   defaultField: boolean;
   isHidden: boolean;
+  fileNames?: string[];
 }
 
 export type Schema = SchemaItem[];

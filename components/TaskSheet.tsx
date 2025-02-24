@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { useSchema } from "@/app/context/SchemaContext";
 import { useUser } from "@/app/context/UserContext";
 import { useWorkflow } from "@/app/context/WorkflowContext";
+import RequestToast, { showToast } from "./Requests/RequestToast";
+import { error } from "console";
 
 const TaskSheet: React.FC = () => {
   const { rowData, setRowData } = useSchema();
@@ -45,7 +47,7 @@ const TaskSheet: React.FC = () => {
     );
 
     if (!currentWorkflowItem) {
-      alert("Workflow step not found.");
+      showToast("Next workflow step not found.", "error");
       return;
     }
 
@@ -72,15 +74,16 @@ const TaskSheet: React.FC = () => {
             r.id === task.id ? updatedTask : r
           );
           setRowData(updatedRowData);
-          alert(
-            `Request approved. Moved to step: ${nextItem.name}. Prev Approver: ${nextItem.prevApprover}, Next Approver: ${nextItem.nextApprover}.`
+          showToast(
+            `Request approved. Moved to step: ${nextItem.name}. Prev Approver: ${nextItem.prevApprover}, Next Approver: ${nextItem.nextApprover}.`,
+            "success"
           );
         }
       } else {
-        alert("Next workflow step not found.");
+        showToast("Next workflow step not found.", "error");
       }
     } else {
-      alert("This request is already at the final step.");
+      showToast("This request is already at the final step.", "info");
     }
   };
 
@@ -92,7 +95,7 @@ const TaskSheet: React.FC = () => {
     );
 
     if (!currentWorkflowItem) {
-      alert("Current workflow step not found.");
+      showToast("Current workflow step not found.", "error");
       return;
     }
 
@@ -103,7 +106,7 @@ const TaskSheet: React.FC = () => {
     );
 
     if (!parentWorkflowItem) {
-      alert("Cannot reject request. Already at the initial step.");
+      showToast("Cannot reject request. Already at the initial step.", "info");
       return;
     }
 
@@ -125,14 +128,16 @@ const TaskSheet: React.FC = () => {
         r.id === task.id ? updatedTask : r
       );
       setRowData(updatedRowData);
-      alert(
-        `Request rejected. Moved back to step: ${parentWorkflowItem.name}. Next Approver: ${task["Previous Approver"]}.`
+      showToast(
+        `Request rejected. Moved back to step: ${parentWorkflowItem.name}. Next Approver: ${task["Previous Approver"]}`,
+        "error"
       );
     }
   };
 
   return (
     <div className="pb-2">
+      <RequestToast />
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild>
           <Button variant="outline" className="bg-blue-950 text-white">

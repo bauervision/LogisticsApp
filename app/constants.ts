@@ -10,6 +10,7 @@ export const FIELD_TYPES = {
   DATE: "date",
   BOOLEAN: "boolean",
   ITEMS: "items",
+  DOCUMENTS: "documents",
 };
 
 // Date format and field type options
@@ -28,6 +29,7 @@ export const FIELD_TYPES_OPTIONS = [
   { value: FIELD_TYPES.DATE, label: "Date" },
   { value: FIELD_TYPES.BOOLEAN, label: "Boolean" },
   { value: FIELD_TYPES.ITEMS, label: "Items" },
+  { value: FIELD_TYPES.DOCUMENTS, label: "Documents" },
 ];
 
 export const PRESET_FIELDS = [
@@ -119,6 +121,15 @@ export const PRESET_FIELDS = [
     parameter: "Requested Award Date",
     format: "MM-DD-YYYY",
     isRequired: true,
+    readOnly: false,
+    defaultField: true,
+    isHidden: false,
+  },
+  {
+    id: "requestDocuments",
+    type: FIELD_TYPES.DOCUMENTS,
+    parameter: "Request Documents",
+    isRequired: false,
     readOnly: false,
     defaultField: true,
     isHidden: false,

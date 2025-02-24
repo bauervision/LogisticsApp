@@ -88,7 +88,7 @@ const DataSetup: React.FC = () => {
   const handleUpdateField = (
     id: string,
     key: keyof SchemaItem,
-    value: string | boolean
+    value: string | boolean | string[]
   ) => {
     setManualSchema((prev) =>
       prev.map((field) =>
@@ -262,6 +262,37 @@ const DataSetup: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
+
+                    {/* Document upload */}
+                    {field.type === FIELD_TYPES.DOCUMENTS && (
+                      <div className="ml-3">
+                        <input
+                          type="file"
+                          multiple
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            if (files) {
+                              const fileNames = Array.from(files).map(
+                                (file) => file.name
+                              );
+                              // Update the field with the selected file names
+                              handleUpdateField(
+                                field.id.toString(),
+                                "fileNames",
+                                fileNames
+                              );
+                            }
+                          }}
+                        />
+                        {field.fileNames && field.fileNames.length > 0 && (
+                          <div>
+                            <p>Selected files: {field.fileNames.join(", ")}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Date */}
                     {field.type === FIELD_TYPES.DATE && (
                       <div className="ml-3">
                         <select

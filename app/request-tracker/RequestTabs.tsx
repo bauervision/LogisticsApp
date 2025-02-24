@@ -21,10 +21,65 @@ import { RequestCommentPopover } from "@/components/Requests/RequestsCommentPopo
 import RequestToast, { showToast } from "@/components/Requests/RequestToast";
 
 import { useFetchWithToast } from "@/hooks/fetchWithToast";
+import OrderForm from "./OrderForm";
+import { useEffect, useMemo, useState } from "react";
+import { RequestItem, useSchema } from "../context/SchemaContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PRODUCTS } from "../constants";
 
 export function RequestTabs() {
   const { selectedRow } = useRequestContext();
+  const { rowData, setRowData } = useSchema();
   const { fetchWithToast } = useFetchWithToast();
+
+  // Local state for the order to allow modifications
+  const [order, setOrder] = useState<Record<string, any>>(selectedRow ?? {});
+
+  // Initialize items from order.requestedItems (or an empty array if not defined).
+  const [items, setItems] = useState<RequestItem[]>(order.requestedItems || []);
+
+  // Sync items back into the order whenever items change.
+  useEffect(() => {
+    setOrder((prev) => ({ ...prev, requestedItems: items }));
+  }, [items]);
+
+  useEffect(() => {
+    if (selectedRow) {
+      setItems(selectedRow["Requested Items"] || []);
+    }
+  }, [selectedRow]);
+
+  // Handlers for Requested Items.
+  const handleRequestItemChange = (
+    index: number,
+    key: keyof RequestItem,
+    value: any
+  ) => {
+    setItems((prev) => {
+      const newItems = [...prev];
+      newItems[index] = { ...newItems[index], [key]: value };
+      return newItems;
+    });
+  };
+
+  const handleRemoveRequestItem = (index: number) => {
+    setItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddRequestItem = () => {
+    setItems((prev) => [...prev, { product: "", price: 0, amount: 1 }]);
+  };
+
+  const totalCost = items.reduce(
+    (sum, item) => sum + (item.price || 0) * (item.amount || 0),
+    0
+  );
 
   if (!selectedRow) {
     return <div>NoData</div>;
@@ -38,6 +93,47 @@ export function RequestTabs() {
     console.log(text);
   };
 
+  // New handler to save only the items back to context.
+  const handleSaveItems = () => {
+    if (rowData) {
+      // Update the current order's "Requested Items" in the rowData array.
+      const updatedRowData = rowData.map((orderItem) =>
+        orderItem.id === order.id
+          ? { ...orderItem, "Requested Items": items }
+          : orderItem
+      );
+      setRowData(updatedRowData);
+      showToast("Items saved successfully", "success");
+    }
+  };
+
+  // This handler updates the order state when a field changes.
+  const handleFieldChange = (fieldName: string, value: any) => {
+    setOrder((prev: any) => ({ ...prev, [fieldName]: value }));
+  };
+
+  const { workflowName, progress } = useMemo(() => {
+    const workflow = selectedRow.workflow;
+    // Use the workflow's name if available, otherwise fall back to the "Request Workflow" field.
+    const name = workflow?.name || selectedRow["Request Workflow"] || "";
+    const currentStep =
+      workflow?.currentStep || selectedRow["Request Status"] || "";
+    // Get the ordered steps from the workflow.
+    const steps: string[] = workflow?.orderedSteps || [];
+
+    if (steps.length > 0) {
+      const totalSteps = steps.length;
+      const currentIndex = steps.findIndex((step) => step === currentStep);
+      if (currentIndex === -1) return { workflowName: name, progress: 0 };
+      // Force 100% if at the last step.
+      if (currentIndex === totalSteps - 1)
+        return { workflowName: name, progress: 100 };
+      const progressPercent = Math.round((currentIndex / totalSteps) * 100);
+      return { workflowName: name, progress: progressPercent };
+    }
+    return { workflowName: name, progress: 0 };
+  }, [selectedRow]);
+
   return (
     <Tabs defaultValue="info" className=" mx-6">
       <RequestToast />
@@ -46,9 +142,7 @@ export function RequestTabs() {
         <TabsTrigger value="docs" disabled={false}>
           Documents
         </TabsTrigger>
-        <TabsTrigger value="lines" disabled>
-          Request Line Items
-        </TabsTrigger>
+        <TabsTrigger value="items">Request Line Items</TabsTrigger>
 
         <TabsTrigger value="orders" disabled>
           Orders
@@ -68,94 +162,153 @@ export function RequestTabs() {
       <TabsContent value="info">
         <Card>
           <CardHeader>
-            <div className=" flex flex-row w-full  items-center justify-between ">
-              {/* <RequestBreadcrumb /> */}
-            </div>
-            <div className="flex flex-row space-x-5"></div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="space-y-1">
-              <div className="gap-4 py-8 requestBG pb-20">
-                {/* First Section */}
-                <RequestContent>
-                  {/* Product */}
-                  <div>
-                    <Label htmlFor="product" className="text-left">
-                      Product
-                    </Label>
-                    <Input
-                      id="product"
-                      placeholder={selectedRow.product}
-                      //value=
-                      className="w-auto"
-                      onChange={() => console.log("Changed Product")}
-                    />
-                  </div>
-                  {/* Price */}
-                  <div>
-                    <Label htmlFor="price" className="text-left">
-                      Price
-                    </Label>
-                    <Input
-                      id="price"
-                      placeholder={`$ ${selectedRow.price.toLocaleString()}`}
-                      value={`$ ${selectedRow.price.toLocaleString()}`}
-                      className="w-auto"
-                      onChange={() => console.log("Changed Price")}
-                    />
-                  </div>
-                  {/* Shipped */}
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id={JSON.stringify(selectedRow.shipped)}
-                      checked={selectedRow.shipped}
-                      disabled={false}
-                    />
-                    <Label htmlFor={JSON.stringify(selectedRow.shipped)}>
-                      Shipped
-                    </Label>
-                  </div>
-
-                  {/* Delivery Date */}
-                  <RequestCalendar
-                    data={{
-                      label: "Delivery Date",
-                      date: new Date(selectedRow.delivery || ""),
-                    }}
-                  />
-
-                  <div className=" grid grid-cols-2 items-center gap-4">
-                    <div>
-                      <Label htmlFor="price" className="text-left">
-                        Current Status
-                      </Label>
-                      <Combobox
-                        placeholder="Set Status"
-                        label="Request Status"
-                        data={statuses}
-                        initialStatus={selectedRow.status}
-                        //onStatusChange={handleRequestSave}
-                      />
-                    </div>
-                  </div>
-
-                  <RequestComment
-                    onTextChange={handleCommentChange}
-                    label="Enter your comments"
-                  />
-
-                  <RequestCommentPopover />
-                  <Button
-                    type="button"
-                    variant="default"
-                    className="bg-blue-800 text-white"
-                    onClick={() => handleRequestSave()}
-                  >
-                    Save Changes
-                  </Button>
-                </RequestContent>
+            {/* Progress Bar with Text Inside */}
+            <div className="relative w-full bg-gray-200 rounded h-8">
+              <div
+                className="bg-blue-600 h-8 rounded"
+                style={{ width: `${progress}%` }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-sm">
+                {workflowName}: {progress}%
               </div>
             </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {/* Render dynamic order fields */}
+            <OrderForm order={order} onFieldChange={handleFieldChange} />
+
+            <Button
+              type="button"
+              variant="default"
+              className="bg-blue-800 text-white mt-4"
+              onClick={() => handleRequestSave()}
+            >
+              Save Changes
+            </Button>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* Requested Items Tab */}
+      <TabsContent value="items">
+        <Card>
+          <CardHeader>
+            <CardTitle>Requested Items</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <fieldset className="md:col-span-2 border p-4 rounded-md">
+              <legend className="px-2 font-semibold text-lg">
+                Requested Items
+              </legend>
+              {items.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex flex-col md:flex-row gap-2 mb-2 items-center"
+                >
+                  {/* Product Dropdown */}
+                  <div className="flex-1">
+                    <Label className="text-sm">Product</Label>
+                    <Select
+                      value={item.product || undefined}
+                      onValueChange={(value) => {
+                        const selectedProduct = PRODUCTS.find(
+                          (prod) => prod.product === value
+                        );
+                        handleRequestItemChange(index, "product", value);
+                        if (selectedProduct) {
+                          // Auto-populate the price when a product is selected.
+                          handleRequestItemChange(
+                            index,
+                            "price",
+                            selectedProduct.price
+                          );
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Product" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PRODUCTS.map((prod) => (
+                          <SelectItem key={prod.product} value={prod.product}>
+                            {prod.product}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Price Display */}
+                  <div className="flex-1">
+                    <Label className="text-sm">Price</Label>
+                    <div className="border rounded-md px-2 py-2 text-sm bg-gray-100">
+                      {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                      }).format(item.price || 0)}
+                    </div>
+                  </div>
+                  {/* Amount Input */}
+                  <div className="flex-1">
+                    <Label className="text-sm">Amount</Label>
+                    <Input
+                      type="number"
+                      placeholder="Amount"
+                      value={item.amount}
+                      onChange={(e) =>
+                        handleRequestItemChange(
+                          index,
+                          "amount",
+                          parseInt(e.target.value, 10)
+                        )
+                      }
+                    />
+                  </div>
+                  {/* Line Total Display */}
+                  <div className="flex-1">
+                    <Label className="text-sm">Line Total</Label>
+                    <div className="border rounded-md px-2 py-2 text-sm bg-gray-100">
+                      {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                      }).format((item.price || 0) * (item.amount || 0))}
+                    </div>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    type="button"
+                    onClick={() => handleRemoveRequestItem(index)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                onClick={handleAddRequestItem}
+                className="mt-2"
+              >
+                Add Request Item
+              </Button>
+              {/* Total Amount Field */}
+              <div className="mt-4">
+                <Label className="text-sm">Total Amount</Label>
+                <div className="border rounded-md px-2 py-2 text-sm bg-gray-100">
+                  {new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                  }).format(totalCost)}
+                </div>
+              </div>
+            </fieldset>
+
+            {/* Save Items Button */}
+            <Button
+              type="button"
+              onClick={handleSaveItems}
+              className="bg-green-600 text-white mt-4"
+            >
+              Save Items
+            </Button>
           </CardContent>
         </Card>
       </TabsContent>
