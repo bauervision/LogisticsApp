@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import ReactJson from "react-json-view";
-
 import {
   Sheet,
   SheetTrigger,
@@ -14,10 +13,12 @@ import { useSchema } from "@/app/context/SchemaContext";
 import { useUser } from "@/app/context/UserContext";
 import { useWorkflow } from "@/app/context/WorkflowContext";
 import RequestToast, { showToast } from "./Requests/RequestToast";
-import { error } from "console";
+import Link from "next/link";
+import { useRequestContext } from "@/app/context/DataContext";
 
 const TaskSheet: React.FC = () => {
   const { rowData, setRowData } = useSchema();
+  const { selectRow } = useRequestContext();
   const { user } = useUser();
   const { state: workflowState } = useWorkflow();
 
@@ -25,7 +26,14 @@ const TaskSheet: React.FC = () => {
   const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
-  // Filter rowData for tasks where "Next Step Approver" equals the current user.
+  // New state for handling the comment input flow.
+  const [pendingAction, setPendingAction] = useState<
+    "approve" | "reject" | null
+  >(null);
+  const [pendingTask, setPendingTask] = useState<any>(null);
+  const [comment, setComment] = useState("");
+
+  // Filter tasks assigned to the current user.
   useEffect(() => {
     if (rowData && user) {
       const filteredTasks = rowData.filter(
@@ -39,100 +47,141 @@ const TaskSheet: React.FC = () => {
     setExpandedTaskId((prev) => (prev === taskId ? null : taskId));
   };
 
-  // Approve will try to advance the request to the next step in the workflow.
-  const handleApprove = (task: any) => {
-    // Find the current workflow item by matching its name to the task's current step.
-    const currentWorkflowItem = Object.values(workflowState.items).find(
-      (item) => item.name === task.workflow.currentStep
-    );
+  // When Approve is clicked, simply set the pending action.
+  const initiateApprove = (task: any) => {
+    setPendingTask(task);
+    setPendingAction("approve");
+  };
 
-    if (!currentWorkflowItem) {
-      showToast("Next workflow step not found.", "error");
+  // When Reject is clicked, simply set the pending action.
+  const initiateReject = (task: any) => {
+    setPendingTask(task);
+    setPendingAction("reject");
+  };
+
+  // After the user enters a comment and clicks Submit, this function processes the workflow update.
+  const handleSubmitAction = () => {
+    if (!comment.trim()) {
+      showToast("Comment is required.", "error");
       return;
     }
 
-    if (currentWorkflowItem.children.length > 0) {
-      // Get the next step (assuming the first child is the next step)
-      const nextItemId = currentWorkflowItem.children[0];
-      const nextItem = workflowState.items[nextItemId];
+    // Capture the current workflow step before updating.
+    const step = pendingTask.workflow.currentStep;
+    const timestamp = new Date().toLocaleString(); // Formats date and time.
 
-      if (nextItem) {
-        // Update the task with the new workflow step, nextApprover, and updated request status.
-        const updatedTask = {
-          ...task,
-          workflow: {
-            ...task.workflow,
-            currentStep: nextItem.name,
-          },
-          "Next Step Approver": nextItem.nextApprover || "",
-          "Previous Approver": user.name,
-          "Request Status": nextItem.name, // Update the status to the name of this step set in the workflow
-        };
+    // Build the comment string with the step, the quoted comment, the user's name, and the timestamp.
+    const commentWithUser = `[${step}] "${comment}" - ${user.name} ${timestamp}`;
 
-        if (rowData) {
-          const updatedRowData = rowData.map((r: any) =>
-            r.id === task.id ? updatedTask : r
-          );
-          setRowData(updatedRowData);
+    let updatedTask = { ...pendingTask };
+
+    // Add the comment to the task’s comments array.
+    if (Array.isArray(updatedTask.comments)) {
+      updatedTask.comments.push(commentWithUser);
+    } else {
+      updatedTask.comments = [commentWithUser];
+    }
+
+    if (pendingAction === "approve") {
+      // Approval logic: find the current workflow item.
+      const currentWorkflowItem = Object.values(workflowState.items).find(
+        (item: any) => item.name === pendingTask.workflow.currentStep
+      );
+
+      if (!currentWorkflowItem) {
+        showToast("Next workflow step not found.", "error");
+        resetPendingAction();
+        return;
+      }
+
+      if (currentWorkflowItem.children.length > 0) {
+        const nextItemId = currentWorkflowItem.children[0];
+        const nextItem = workflowState.items[nextItemId];
+
+        if (nextItem) {
+          updatedTask = {
+            ...updatedTask,
+            workflow: {
+              ...updatedTask.workflow,
+              currentStep: nextItem.name,
+            },
+            "Next Step Approver": nextItem.nextApprover || "",
+            "Previous Approver": user.name,
+            "Request Status": nextItem.name,
+          };
           showToast(
             `Request approved. Moved to step: ${nextItem.name}. Prev Approver: ${nextItem.prevApprover}, Next Approver: ${nextItem.nextApprover}.`,
             "success"
           );
+        } else {
+          showToast("Next workflow step not found.", "error");
+          resetPendingAction();
+          return;
         }
       } else {
-        showToast("Next workflow step not found.", "error");
+        showToast("This request is already at the final step.", "info");
+        resetPendingAction();
+        return;
       }
-    } else {
-      showToast("This request is already at the final step.", "info");
-    }
-  };
-
-  // For now, Reject will simply alert the user.
-  const handleReject = (task: any) => {
-    // Find the current workflow item by matching its name to the task's current step.
-    const currentWorkflowItem = Object.values(workflowState.items).find(
-      (item: any) => item.name === task.workflow.currentStep
-    );
-
-    if (!currentWorkflowItem) {
-      showToast("Current workflow step not found.", "error");
-      return;
-    }
-
-    // Find the parent workflow item by looking for an item whose children array includes the current workflow item's id.
-    const parentWorkflowItem = Object.values(workflowState.items).find(
-      (item: any) =>
-        item.children && item.children.includes(currentWorkflowItem.id)
-    );
-
-    if (!parentWorkflowItem) {
-      showToast("Cannot reject request. Already at the initial step.", "info");
-      return;
-    }
-
-    // Update the task to move it back one step.
-    // Assign the previous approver to be the new next approver.
-    const updatedTask = {
-      ...task,
-      workflow: {
-        ...task.workflow,
-        currentStep: parentWorkflowItem.name,
-      },
-      "Next Step Approver": task["Previous Approver"],
-      "Previous Approver": user.name,
-      "Request Status": parentWorkflowItem.name,
-    };
-
-    if (rowData) {
-      const updatedRowData = rowData.map((r: any) =>
-        r.id === task.id ? updatedTask : r
+    } else if (pendingAction === "reject") {
+      // Rejection logic: find the current and then parent workflow item.
+      const currentWorkflowItem = Object.values(workflowState.items).find(
+        (item: any) => item.name === pendingTask.workflow.currentStep
       );
-      setRowData(updatedRowData);
+      if (!currentWorkflowItem) {
+        showToast("Current workflow step not found.", "error");
+        resetPendingAction();
+        return;
+      }
+      const parentWorkflowItem = Object.values(workflowState.items).find(
+        (item: any) =>
+          item.children && item.children.includes(currentWorkflowItem.id)
+      );
+      if (!parentWorkflowItem) {
+        showToast(
+          "Cannot reject request. Already at the initial step.",
+          "info"
+        );
+        resetPendingAction();
+        return;
+      }
+      updatedTask = {
+        ...updatedTask,
+        workflow: {
+          ...updatedTask.workflow,
+          currentStep: parentWorkflowItem.name,
+        },
+        "Next Step Approver": pendingTask["Previous Approver"],
+        "Previous Approver": user.name,
+        "Request Status": parentWorkflowItem.name,
+      };
       showToast(
-        `Request rejected. Moved back to step: ${parentWorkflowItem.name}. Next Approver: ${task["Previous Approver"]}`,
+        `Request rejected. Moved back to step: ${parentWorkflowItem.name}. Next Approver: ${pendingTask["Previous Approver"]}`,
         "error"
       );
     }
+
+    // Update the task in rowData.
+    if (rowData) {
+      const updatedRowData = rowData.map((r: any) =>
+        r.id === updatedTask.id ? updatedTask : r
+      );
+      setRowData(updatedRowData);
+    }
+
+    resetPendingAction();
+  };
+
+  // Helper to reset the pending action and comment.
+  const resetPendingAction = () => {
+    setPendingTask(null);
+    setPendingAction(null);
+    setComment("");
+  };
+
+  const handleOpeningFullRequest = (task: any) => {
+    console.log("Opening full request", task, rowData);
+    selectRow(task);
   };
 
   return (
@@ -178,17 +227,56 @@ const TaskSheet: React.FC = () => {
                         <div className="mt-2 flex space-x-2">
                           <Button
                             variant="outline"
-                            onClick={() => handleApprove(task)}
+                            onClick={() => initiateApprove(task)}
                           >
                             Approve
                           </Button>
                           <Button
                             variant="destructive"
-                            onClick={() => handleReject(task)}
+                            onClick={() => initiateReject(task)}
                           >
                             Reject
                           </Button>
+                          <Link href={`/request-tracker/${task["id"]}`}>
+                            <Button
+                              variant="outline"
+                              className="bg-blue-800 text-white"
+                              onClick={() => handleOpeningFullRequest(task)}
+                            >
+                              View Request
+                            </Button>
+                          </Link>
                         </div>
+                        {/* Render the comment input when an action is pending for this task */}
+                        {pendingTask && pendingTask.id === task.id && (
+                          <div className="mt-4 border p-2 rounded">
+                            <h4 className="text-md font-semibold mb-2">
+                              Comment is required:
+                            </h4>
+                            <textarea
+                              className="w-full p-2 border rounded"
+                              placeholder="Enter your comment..."
+                              value={comment}
+                              onChange={(e) => setComment(e.target.value)}
+                              rows={4}
+                            />
+                            <div className="mt-2 flex space-x-2">
+                              <Button
+                                variant="outline"
+                                onClick={handleSubmitAction}
+                                disabled={!comment.trim()}
+                              >
+                                Submit
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                onClick={resetPendingAction}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </li>
