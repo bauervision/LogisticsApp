@@ -42,6 +42,7 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { WorkflowItemState } from "../context/WorkflowContext";
 
 export function RequestTabs() {
   const { selectedRow } = useRequestContext();
@@ -58,6 +59,12 @@ export function RequestTabs() {
 
   // State to control the delete confirmation dialog.
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  // At the top of RequestTabs, along with your other useState hooks:
+  const [pendingAction, setPendingAction] = useState<
+    "approve" | "reject" | null
+  >(null);
+  const [comment, setComment] = useState("");
 
   // Sync items back into the order whenever items change.
   useEffect(() => {
@@ -171,6 +178,85 @@ export function RequestTabs() {
   const canDelete =
     user &&
     (user.role === AccessRole.SUPER_ADMIN || user.role === AccessRole.ADMIN);
+
+  const handleSubmitAction = () => {
+    if (!comment.trim()) {
+      showToast("Comment is required.", "error");
+      return;
+    }
+
+    // Format the comment
+    const timestamp = new Date().toLocaleString();
+    const formattedComment = `[${selectedRow.workflow.currentStep}] "${comment}" - ${user.name} ${timestamp}`;
+
+    // Make a copy of the request
+    let updatedRequest = { ...selectedRow };
+
+    // Get current step and orderedSteps from the workflow
+    const { currentStep, orderedSteps } = selectedRow.workflow;
+    const currentIndex = orderedSteps.indexOf(currentStep);
+
+    if (currentIndex === -1) {
+      showToast("Current workflow step not found in ordered steps.", "error");
+      setPendingAction(null);
+      return;
+    }
+
+    if (pendingAction === "approve") {
+      if (currentIndex < orderedSteps.length - 1) {
+        const nextStep = orderedSteps[currentIndex + 1];
+        console.log("NextStep", nextStep);
+        updatedRequest.workflow.currentStep = nextStep;
+        updatedRequest["Next Step Approver"] = nextStep["Next Step Approver"]; // You may update this if you have a mapping for next approvers
+        updatedRequest["Previous Approver"] = user.name;
+        updatedRequest["Request Status"] = nextStep;
+        showToast(`Request approved. Moved to step: ${nextStep}.`, "success");
+      } else {
+        showToast("This request is already at the final step.", "info");
+        setPendingAction(null);
+        return;
+      }
+    } else if (pendingAction === "reject") {
+      if (currentIndex > 0) {
+        const previousStep = orderedSteps[currentIndex - 1];
+        updatedRequest.workflow.currentStep = previousStep;
+        updatedRequest["Next Step Approver"] =
+          selectedRow["Previous Approver"] || "";
+        updatedRequest["Previous Approver"] = user.name;
+        updatedRequest["Request Status"] = previousStep;
+        showToast(
+          `Request rejected. Moved back to step: ${previousStep}.`,
+          "error"
+        );
+      } else {
+        showToast(
+          "Cannot reject request. Already at the initial step.",
+          "info"
+        );
+        setPendingAction(null);
+        return;
+      }
+    }
+
+    // Append the comment
+    if (Array.isArray(updatedRequest.comments)) {
+      updatedRequest.comments.push(formattedComment);
+    } else {
+      updatedRequest.comments = [formattedComment];
+    }
+
+    // Update the request in rowData
+    if (rowData) {
+      const updatedRowData = rowData.map((r: any) =>
+        r.id === updatedRequest.id ? updatedRequest : r
+      );
+      setRowData(updatedRowData);
+
+      // Reset state
+      setPendingAction(null);
+      setComment("");
+    }
+  };
 
   return (
     <>
@@ -481,6 +567,59 @@ export function RequestTabs() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Approval/Reject Section */}
+      {selectedRow["Next Step Approver"] === user.name && (
+        <div className="p-4 border-t mt-4">
+          {!pendingAction ? (
+            <div className="flex space-x-4">
+              <Button
+                variant="outline"
+                onClick={() => setPendingAction("approve")}
+              >
+                Approve
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setPendingAction("reject")}
+              >
+                Reject
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-4">
+              <h4 className="text-md font-semibold mb-2">
+                Comment is required:
+              </h4>
+              <textarea
+                className="w-full p-2 border rounded"
+                placeholder="Enter your comment..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={4}
+              />
+              <div className="mt-2 flex space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={handleSubmitAction}
+                  disabled={!comment.trim()}
+                >
+                  Submit
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setPendingAction(null);
+                    setComment("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 }
