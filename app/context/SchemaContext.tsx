@@ -9,6 +9,12 @@ import React, {
 } from "react";
 import { useWorkflow } from "@/app/context/WorkflowContext";
 
+export interface DocumentData {
+  name: string;
+  size: number;
+  data?: string;
+}
+
 export interface RequestItem {
   product: string;
   price: number;

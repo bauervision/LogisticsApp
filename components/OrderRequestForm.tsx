@@ -33,6 +33,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // Date formats mapping.
 const DATE_FORMATS: { [key: string]: string } = {
@@ -68,6 +76,14 @@ const OrderRequestForm = () => {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [workflowSteps, setWorkflowSteps] = useState<string[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
+
+  // New states for upload progress (used at submission time)
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  // New states for document removal confirmation.
+  const [docToRemove, setDocToRemove] = useState<number | null>(null);
+  const [isDocRemoveDialogOpen, setIsDocRemoveDialogOpen] = useState(false);
 
   // Calculate the total cost of all request items.
   const totalCost = (formValues["Requested Items"] || []).reduce(
@@ -154,6 +170,84 @@ const OrderRequestForm = () => {
     setFormValues((prev) => ({ ...prev, "Requested Items": updatedItems }));
   };
 
+  // ----------------------------
+  // Document Upload Handlers
+  // ----------------------------
+  // When files are selected, append them (as File objects) to the current Documents list.
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    const fileArray = Array.from(files);
+    setFormValues((prev) => ({
+      ...prev,
+      Documents: prev.Documents ? [...prev.Documents, ...fileArray] : fileArray,
+    }));
+  };
+
+  // Helper: read a File object and resolve with an object containing its name, size and data URL.
+  const readFile = (
+    file: File
+  ): Promise<{ name: string; size: number; data: string }> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve({
+          name: file.name,
+          size: file.size,
+          data: reader.result as string,
+        });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Simulate upload progress and then read all files.
+  const simulateUpload = (
+    files: File[]
+  ): Promise<{ name: string; size: number; data: string }[]> => {
+    return new Promise((resolve, reject) => {
+      setIsUploading(true);
+      setUploadProgress(0);
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+        setUploadProgress(progress);
+        if (progress >= 100) {
+          clearInterval(interval);
+          Promise.all(files.map(readFile))
+            .then((results) => {
+              setIsUploading(false);
+              resolve(results);
+            })
+            .catch((err) => {
+              setIsUploading(false);
+              reject(err);
+            });
+        }
+      }, 100);
+    });
+  };
+
+  // Handle document removal: open the confirmation dialog.
+  const confirmRemoveDocument = (index: number) => {
+    setDocToRemove(index);
+    setIsDocRemoveDialogOpen(true);
+  };
+
+  // Remove the document once confirmed.
+  const removeDocument = () => {
+    if (docToRemove === null) return;
+    const currentDocs: any[] = formValues.Documents || [];
+    const updatedDocs = currentDocs.filter((_, i) => i !== docToRemove);
+    setFormValues((prev) => ({ ...prev, Documents: updatedDocs }));
+    setIsDocRemoveDialogOpen(false);
+    setDocToRemove(null);
+  };
+
+  // ----------------------------
+  // Existing Documents handler (if needed)
+  // ----------------------------
   const handleDocuments = (
     id: string,
     key: keyof SchemaItem,
@@ -165,12 +259,9 @@ const OrderRequestForm = () => {
   // ----------------------------
   // useEffect for default values
   // ----------------------------
-
   useEffect(() => {
     if (savedWorkflows && savedWorkflows.length === 1) {
       const defaultWorkflow = savedWorkflows[0];
-      console.log(defaultWorkflow);
-      // Only update if not already set
       if (currentWorkflowName !== defaultWorkflow) {
         setCurrentWorkflowName(defaultWorkflow);
         loadWorkflow(defaultWorkflow);
@@ -185,10 +276,8 @@ const OrderRequestForm = () => {
   useEffect(() => {
     if (workflowState.rootItem) {
       const firstStep = workflowState.items[workflowState.rootItem];
-      console.log("First Step", firstStep);
       const currentStatus = firstStep?.name || "Draft";
       const nextApprover = firstStep?.nextApprover || "";
-
       setCurrentWorkflowName(workflowState.name);
       setFormValues((prev) => ({
         ...prev,
@@ -200,7 +289,7 @@ const OrderRequestForm = () => {
         "Request Created": getFormattedTodayDate("MM-DD-YYYY"),
       }));
     }
-  }, [workflowState]); // Now re-run when workflowState changes.
+  }, [workflowState]);
 
   useEffect(() => {
     const newRequestNumber =
@@ -242,14 +331,13 @@ const OrderRequestForm = () => {
       }
     });
     setErrors(newErrors);
-    console.log(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   // ----------------------------
   // Submission
   // ----------------------------
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!validateForm()) {
       console.log("Failed Validation!");
@@ -261,7 +349,8 @@ const OrderRequestForm = () => {
     } else if (state.rootItem && state.items[state.rootItem]) {
       firstStep = state.items[state.rootItem].name;
     }
-    const newRow = {
+    // Prepare the new row.
+    const newRow: any = {
       ...formValues,
       id: rowData ? rowData.length + 1 : 1,
       workflow: {
@@ -270,6 +359,19 @@ const OrderRequestForm = () => {
         orderedSteps: workflowSteps,
       },
     };
+
+    // If there are documents to upload, simulate the upload now.
+    if (newRow.Documents && newRow.Documents.length > 0) {
+      try {
+        const files: File[] = newRow.Documents;
+        const results = await simulateUpload(files);
+        newRow.Documents = results; // Each result has name, size, data.
+        showToast("Documents uploaded successfully", "success");
+      } catch (error) {
+        showToast("Error uploading documents", "error");
+        return;
+      }
+    }
 
     addRow(newRow);
     setFormValues({});
@@ -304,7 +406,6 @@ const OrderRequestForm = () => {
                   !field.parameter.startsWith("Shipping Address:")
               )
               .map((field) => {
-                // Render the "Request Workflow" field with dropdown functionality.
                 if (field.parameter === "Request Workflow") {
                   return (
                     <div key={field.id} className="space-y-2">
@@ -340,7 +441,6 @@ const OrderRequestForm = () => {
                     </div>
                   );
                 }
-
                 if (field.parameter === "Next Step Approver") {
                   const defaultNextApprover =
                     formValues["Next Step Approver"] ||
@@ -367,9 +467,7 @@ const OrderRequestForm = () => {
                       <Select
                         value={defaultNextApprover}
                         onValueChange={(value) => {
-                          // Update local form state.
                           handleInputChange(field.parameter, value);
-                          // Dispatch action to update the workflow state.
                           if (workflowState.rootItem) {
                             dispatch({
                               type: "updateItem",
@@ -393,8 +491,7 @@ const OrderRequestForm = () => {
                     </div>
                   );
                 }
-
-                /* Document upload */
+                /* Document upload field update */
                 if (
                   field.type.toUpperCase() ===
                   FIELD_TYPES.DOCUMENTS.toUpperCase()
@@ -422,31 +519,42 @@ const OrderRequestForm = () => {
                         <input
                           type="file"
                           multiple
-                          onChange={(e) => {
-                            const files = e.target.files;
-                            if (files) {
-                              const fileNames = Array.from(files).map(
-                                (file) => file.name
-                              );
-                              // Update the field with the selected file names
-                              handleDocuments(
-                                field.id.toString(),
-                                "fileNames",
-                                fileNames
-                              );
-                            }
-                          }}
+                          onChange={handleFileChange}
                         />
-                        {field.fileNames && field.fileNames.length > 0 && (
-                          <div>
-                            <p>Selected files: {field.fileNames.join(", ")}</p>
-                          </div>
-                        )}
+                        {formValues.Documents &&
+                          formValues.Documents.length > 0 && (
+                            <div className="mt-2">
+                              <p className="font-medium">Selected files:</p>
+                              <ul>
+                                {formValues.Documents.map(
+                                  (doc: any, index: number) => (
+                                    <li
+                                      key={index}
+                                      className="flex items-center justify-between border-b py-1"
+                                    >
+                                      <span>
+                                        {doc.name} (
+                                        {(doc.size / 1024).toFixed(2)} KB)
+                                      </span>
+                                      <Button
+                                        variant="destructive"
+                                        size="icon"
+                                        onClick={() =>
+                                          confirmRemoveDocument(index)
+                                        }
+                                      >
+                                        🗑️
+                                      </Button>
+                                    </li>
+                                  )
+                                )}
+                              </ul>
+                            </div>
+                          )}
                       </div>
                     </fieldset>
                   );
                 }
-
                 // Handle the ITEMS field
                 if (
                   field.type.toUpperCase() === FIELD_TYPES.ITEMS.toUpperCase()
@@ -469,14 +577,11 @@ const OrderRequestForm = () => {
                           </span>
                         )}
                       </legend>
-
-                      {/* Ordered Items */}
                       {items.map((item, index) => (
                         <div
                           key={index}
                           className="flex flex-col md:flex-row gap-2 mb-2 items-center"
                         >
-                          {/* Product Dropdown */}
                           <div className="flex-1">
                             <Label className="text-sm">Product</Label>
                             <Select
@@ -491,7 +596,6 @@ const OrderRequestForm = () => {
                                   value
                                 );
                                 if (selectedProduct) {
-                                  // Auto-populate the Price when a product is selected.
                                   handleRequestItemChange(
                                     index,
                                     "price",
@@ -515,8 +619,6 @@ const OrderRequestForm = () => {
                               </SelectContent>
                             </Select>
                           </div>
-
-                          {/* Price Display (read-only and formatted as currency) */}
                           <div className="flex-1">
                             <Label className="text-sm">Price</Label>
                             <div className="border rounded-md px-2 py-2 text-sm bg-gray-100">
@@ -526,7 +628,6 @@ const OrderRequestForm = () => {
                               }).format(item.price || 0)}
                             </div>
                           </div>
-                          {/* Amount Input */}
                           <div className="flex-1">
                             <Label className="text-sm">Amount</Label>
                             <Input
@@ -542,7 +643,6 @@ const OrderRequestForm = () => {
                               }
                             />
                           </div>
-                          {/* Line Total Display */}
                           <div className="flex-1">
                             <Label className="text-sm">Line Total</Label>
                             <div className="border rounded-md px-2 py-2 text-sm bg-gray-100">
@@ -568,7 +668,6 @@ const OrderRequestForm = () => {
                       >
                         Add Request Item
                       </Button>
-                      {/* Total Amount Field */}
                       <div className="mt-4">
                         <Label className="text-sm">Total Amount</Label>
                         <div className="border rounded-md px-2 py-2 text-sm bg-gray-100">
@@ -581,7 +680,6 @@ const OrderRequestForm = () => {
                     </fieldset>
                   );
                 }
-
                 if (
                   field.type.toUpperCase() === FIELD_TYPES.DATE.toUpperCase()
                 ) {
@@ -629,7 +727,6 @@ const OrderRequestForm = () => {
                     </div>
                   );
                 }
-
                 return (
                   <div key={field.id} className="space-y-2">
                     <Label
@@ -739,7 +836,6 @@ const OrderRequestForm = () => {
                     </div>
                   );
                 }
-                // Render a normal text input for other Shipping Address fields.
                 return (
                   <div key={field.id} className="space-y-2">
                     <Label
@@ -774,6 +870,48 @@ const OrderRequestForm = () => {
           Submit
         </Button>
       </form>
+
+      {/* Document Removal Confirmation Dialog */}
+      <Dialog
+        open={isDocRemoveDialogOpen}
+        onOpenChange={setIsDocRemoveDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Document</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove this document?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDocRemoveDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={removeDocument}>
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Progress Dialog (displayed during submission) */}
+      <Dialog open={isUploading}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Uploading Documents</DialogTitle>
+            <DialogDescription>{uploadProgress}% completed</DialogDescription>
+          </DialogHeader>
+          <div className="w-full bg-gray-200 rounded h-4">
+            <div
+              className="bg-blue-600 h-4 rounded"
+              style={{ width: `${uploadProgress}%` }}
+            ></div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -10,18 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRequestContext } from "../context/DataContext";
-import RequestContent from "@/components/Requests/RequestContent";
-import { Switch } from "@/components/ui/switch";
-import { RequestCalendar } from "@/components/Requests/RequestCalendar";
-import { Combobox } from "@/components/Requests/ComboBox";
-import { statuses } from "@/components/Requests/requestPages/requestData";
-import { RequestComment } from "@/components/Requests/RequestComment";
-import { RequestCommentPopover } from "@/components/Requests/RequestsCommentPopover";
+
 import RequestToast, { showToast } from "@/components/Requests/RequestToast";
 import { useFetchWithToast } from "@/hooks/fetchWithToast";
 import OrderForm from "./OrderForm";
-import { useEffect, useMemo, useState } from "react";
-import { RequestItem, useSchema } from "../context/SchemaContext";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { DocumentData, RequestItem, useSchema } from "../context/SchemaContext";
 import {
   Select,
   SelectContent,
@@ -66,6 +60,31 @@ export function RequestTabs() {
   >(null);
   const [comment, setComment] = useState("");
 
+  const [isDocDialogOpen, setIsDocDialogOpen] = useState(false);
+  // ----- NEW: Documents state -----
+  // We'll assume the request stores documents as an array of objects.
+  const [docs, setDocs] = useState<DocumentData[]>(
+    selectedRow?.["Documents"] || []
+  );
+  const [selectedDocument, setSelectedDocument] = useState<
+    DocumentData | string | null
+  >(null);
+
+  // State for the currently selected document (for download/viewing)
+
+  // Download flow states:
+  const [isDownloadConfirmDialogOpen, setIsDownloadConfirmDialogOpen] =
+    useState(false);
+  const [isDownloadProgressDialogOpen, setIsDownloadProgressDialogOpen] =
+    useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [isFileViewerOpen, setIsFileViewerOpen] = useState(false);
+
+  // Upload new documents states (for adding new docs)
+  const [isUploadInProgress, setIsUploadInProgress] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Sync items back into the order whenever items change.
   useEffect(() => {
     setOrder((prev) => ({ ...prev, requestedItems: items }));
@@ -74,8 +93,12 @@ export function RequestTabs() {
   useEffect(() => {
     if (selectedRow) {
       setItems(selectedRow["Requested Items"] || []);
+      setDocs(selectedRow?.["Documents"] || []);
     }
   }, [selectedRow]);
+
+  // Get the documents array from the request (or an empty array if none).
+  const documents: string[] = selectedRow?.["Documents"] || [];
 
   // Handlers for Requested Items.
   const handleRequestItemChange = (
@@ -106,6 +129,79 @@ export function RequestTabs() {
   if (!selectedRow) {
     return <div>NoData</div>;
   }
+
+  // ----- Document Download Handlers -----
+  // Called when a document button is clicked.
+  const handleDocumentClick = (doc: any) => {
+    setSelectedDocument(doc);
+    setIsDownloadConfirmDialogOpen(true);
+  };
+
+  // Called when the user confirms download.
+  const startDownloadSimulation = () => {
+    setIsDownloadConfirmDialogOpen(false);
+    setIsDownloadProgressDialogOpen(true);
+    setDownloadProgress(0);
+    const interval = setInterval(() => {
+      setDownloadProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setIsDownloadProgressDialogOpen(false);
+          setIsFileViewerOpen(true);
+          return 100;
+        }
+        return prev + 10;
+      });
+    }, 100);
+  };
+
+  // ----- Document Upload Handlers -----
+  // Read a file into an object with name, size, and data URL.
+  const readFile = (
+    file: File
+  ): Promise<{ name: string; size: number; data: string }> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve({
+          name: file.name,
+          size: file.size,
+          data: reader.result as string,
+        });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // When user selects new files via the hidden file input.
+  const handleNewFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    const fileArray = Array.from(files);
+    setIsUploadInProgress(true);
+    setUploadProgress(0);
+    const interval = setInterval(() => {
+      setUploadProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          Promise.all(fileArray.map(readFile))
+            .then((results) => {
+              // Append new documents to the existing docs array.
+              setDocs((prevDocs) => [...prevDocs, ...results]);
+              showToast("Documents uploaded successfully", "success");
+              setIsUploadInProgress(false);
+            })
+            .catch((err) => {
+              showToast("Error uploading documents", "error");
+              setIsUploadInProgress(false);
+            });
+          return 100;
+        }
+        return prev + 10;
+      });
+    }, 100);
+  };
 
   const handleRequestSave = async (newStatus?: string) => {
     const result = await fetchWithToast("test");
@@ -262,6 +358,7 @@ export function RequestTabs() {
     <>
       {canDelete && (
         <div className="mb-4">
+          {/* Delete Request COnfirmation dialog */}
           <Dialog
             open={isDeleteDialogOpen}
             onOpenChange={setIsDeleteDialogOpen}
@@ -301,9 +398,8 @@ export function RequestTabs() {
         <RequestToast />
         <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="info">Request Information</TabsTrigger>
-          <TabsTrigger value="docs" disabled={false}>
-            Documents
-          </TabsTrigger>
+          {/* Disable the Documents tab trigger if there are no documents */}
+          <TabsTrigger value="docs">Documents</TabsTrigger>
           <TabsTrigger value="items">Request Line Items</TabsTrigger>
           <TabsTrigger value="orders" disabled>
             Orders
@@ -345,6 +441,53 @@ export function RequestTabs() {
               >
                 Save Changes
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="docs">
+          <Card>
+            <CardHeader>
+              <CardTitle>Documents</CardTitle>
+              <CardDescription>
+                All documents associated with the request.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="space-y-1">
+                <Label className="block">Current Documents</Label>
+                {docs.length > 0 ? (
+                  docs.map((doc, index) => (
+                    <Button
+                      key={index}
+                      variant="link"
+                      className="block text-left"
+                      onClick={() => handleDocumentClick(doc)}
+                    >
+                      {doc.name} ({(doc.size / 1024).toFixed(2)} KB)
+                    </Button>
+                  ))
+                ) : (
+                  <p>No documents available.</p>
+                )}
+              </div>
+              {/* Add New Documents Button */}
+              <div className="mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Add New Documents
+                </Button>
+                <input
+                  type="file"
+                  multiple
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={handleNewFileUpload}
+                />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -472,24 +615,6 @@ export function RequestTabs() {
           </Card>
         </TabsContent>
 
-        {/* Documents Tab */}
-        <TabsContent value="docs">
-          <Card>
-            <CardHeader>
-              <CardTitle>Documents</CardTitle>
-              <CardDescription>All documents.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="space-y-1">
-                <div className="gap-4 py-8 requestBG pb-20">
-                  <Label htmlFor="current">Current Documents</Label>
-                  <div>Document Table Here</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         {/* Orders Tab */}
         <TabsContent value="orders">
           <Card>
@@ -567,6 +692,119 @@ export function RequestTabs() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Download Confirmation Dialog */}
+      <Dialog
+        open={isDownloadConfirmDialogOpen}
+        onOpenChange={setIsDownloadConfirmDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Download</DialogTitle>
+            <DialogDescription>
+              Download{" "}
+              {typeof selectedDocument === "object" && selectedDocument !== null
+                ? selectedDocument.name
+                : selectedDocument}
+              ?<br />
+              Size:{" "}
+              {typeof selectedDocument === "object" && selectedDocument !== null
+                ? (selectedDocument.size / 1024).toFixed(2)
+                : "N/A"}{" "}
+              KB
+              <br />
+              Estimated download time: 1 second.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDownloadConfirmDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="default" onClick={startDownloadSimulation}>
+              Download
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Download Progress Dialog */}
+      <Dialog open={isDownloadProgressDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Downloading...</DialogTitle>
+            <DialogDescription>{downloadProgress}% completed</DialogDescription>
+          </DialogHeader>
+          <div className="w-full bg-gray-200 rounded h-4">
+            <div
+              className="bg-blue-600 h-4 rounded"
+              style={{ width: `${downloadProgress}%` }}
+            ></div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* File Viewer Dialog */}
+      <Dialog open={isFileViewerOpen} onOpenChange={setIsFileViewerOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {typeof selectedDocument === "object" && selectedDocument !== null
+                ? selectedDocument.name
+                : selectedDocument}
+            </DialogTitle>
+
+            <DialogDescription>File Viewer</DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            {typeof selectedDocument === "object" &&
+            selectedDocument !== null &&
+            selectedDocument.data ? (
+              selectedDocument.data.startsWith("data:image") ? (
+                <img
+                  src={selectedDocument.data}
+                  alt={selectedDocument.name}
+                  className="max-w-full h-auto"
+                />
+              ) : (
+                <iframe
+                  src={selectedDocument.data}
+                  className="w-full h-80"
+                  title={selectedDocument.name}
+                />
+              )
+            ) : (
+              <p>No file data available.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsFileViewerOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Progress Dialog */}
+      <Dialog open={isUploadInProgress}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Uploading Documents</DialogTitle>
+            <DialogDescription>{uploadProgress}% completed</DialogDescription>
+          </DialogHeader>
+          <div className="w-full bg-gray-200 rounded h-4">
+            <div
+              className="bg-green-600 h-4 rounded"
+              style={{ width: `${uploadProgress}%` }}
+            ></div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Approval/Reject Section */}
       {selectedRow["Next Step Approver"] === user.name && (

@@ -433,26 +433,26 @@ const WorkflowComponent: React.FC = memo(() => {
     );
   };
 
-  useEffect(() => {
-    console.log(
-      "Syncing metadata:",
-      state.workflowKey,
-      state.workflowDescription
-    );
+  // useEffect(() => {
+  //   console.log(
+  //     "Syncing metadata:",
+  //     state.workflowKey,
+  //     state.workflowDescription
+  //   );
 
-    if (state.workflowKey !== workflowKey) {
-      setWorkflowKey(state.workflowKey || ""); // Sync workflowKey
-    }
+  //   if (state.workflowKey !== workflowKey) {
+  //     setWorkflowKey(state.workflowKey || ""); // Sync workflowKey
+  //   }
 
-    if (state.workflowDescription !== workflowDescription) {
-      setWorkflowDescription(state.workflowDescription || ""); // Sync workflowDescription
-    }
-  }, [
-    state.workflowKey,
-    state.workflowDescription,
-    workflowKey,
-    workflowDescription,
-  ]);
+  //   if (state.workflowDescription !== workflowDescription) {
+  //     setWorkflowDescription(state.workflowDescription || ""); // Sync workflowDescription
+  //   }
+  // }, [
+  //   state.workflowKey,
+  //   state.workflowDescription,
+  //   workflowKey,
+  //   workflowDescription,
+  // ]);
 
   return (
     <div className="p-6 mx-4 bg-slate-200 rounded-xl shadow-md space-y-4 ">
