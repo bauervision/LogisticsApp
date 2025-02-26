@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { SchemaItem, useSchema } from "@/app/context/SchemaContext";
+import {
+  DocumentData,
+  SchemaItem,
+  useSchema,
+} from "@/app/context/SchemaContext";
 import { useWorkflow } from "@/app/context/WorkflowContext";
 import { useRequestContext } from "@/app/context/DataContext";
 import { Input } from "@/components/ui/input";
@@ -203,9 +207,7 @@ const OrderRequestForm = () => {
   };
 
   // Simulate upload progress and then read all files.
-  const simulateUpload = (
-    files: File[]
-  ): Promise<{ name: string; size: number; data: string }[]> => {
+  const simulateUpload = (files: File[]): Promise<DocumentData[]> => {
     return new Promise((resolve, reject) => {
       setIsUploading(true);
       setUploadProgress(0);
