@@ -254,6 +254,7 @@ export const DEFAULT_WORKFLOW: WorkflowState = {
       children: ["sourcing"],
       nextApprover: "",
       prevApprover: "",
+      easyApproval: true,
     },
     sourcing: {
       id: "sourcing",
@@ -261,6 +262,7 @@ export const DEFAULT_WORKFLOW: WorkflowState = {
       children: ["purchasing"],
       nextApprover: "",
       prevApprover: "",
+      easyApproval: true,
     },
     purchasing: {
       id: "purchasing",
@@ -268,6 +270,7 @@ export const DEFAULT_WORKFLOW: WorkflowState = {
       children: ["order-complete"],
       nextApprover: "",
       prevApprover: "",
+      easyApproval: false,
     },
     "order-complete": {
       id: "order-complete",
@@ -275,6 +278,7 @@ export const DEFAULT_WORKFLOW: WorkflowState = {
       children: [],
       nextApprover: "",
       prevApprover: "",
+      easyApproval: false,
     },
   },
   workflowKey: "default",

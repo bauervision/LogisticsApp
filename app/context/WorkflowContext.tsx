@@ -18,6 +18,9 @@ export interface WorkflowItemState {
   children: string[];
   nextApprover?: string;
   prevApprover?: string;
+  easyApproval: boolean;
+  approverAction?: string;
+  approverComment?: string;
 }
 
 export interface WorkflowState {
@@ -125,6 +128,7 @@ const workflowReducer = (
         name: action.name,
         children: [],
         nextApprover: "",
+        easyApproval: true,
       };
 
       if (!state.rootItem) {
@@ -170,6 +174,7 @@ const workflowReducer = (
         name: action.name,
         children: [],
         nextApprover: "",
+        easyApproval: true,
       };
       return {
         ...state,

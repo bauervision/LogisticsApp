@@ -326,6 +326,7 @@ const WorkflowComponent: React.FC = memo(() => {
   };
 
   const handleAddFirstItem = () => {
+    console.log("handleAddFirstItem.....initialzing workflow...");
     const rootItemId = `root-${Date.now()}`;
     dispatch({
       type: "initialize",
@@ -364,15 +365,20 @@ const WorkflowComponent: React.FC = memo(() => {
             className="p-2 border border-gray-300 rounded-md"
           />
           <p className="text-lg">
-            {/* If nextApprover is set, display it */}
             {item.nextApprover ? (
               <>
-                {" "}
-                - Next Approver:{" "}
+                {" - Approver: "}
                 <span className="font-semibold">{item.nextApprover}</span>
               </>
             ) : (
               <>Needs Approver Assigned</>
+            )}
+            {!item.easyApproval && item.approverAction && (
+              <>
+                {"  -"}
+                <span className="font-semibold">{item.approverAction}</span>
+                {" - REQUIRED"}
+              </>
             )}
           </p>
           {showSaveName && (
@@ -385,16 +391,6 @@ const WorkflowComponent: React.FC = memo(() => {
           )}
         </div>
         <div className="flex flex-wrap space-x-2 mt-2">
-          {/* {Object.keys(workflow.states[item.currentState].on).map((action) => (
-            <div
-              key={action}
-              //onClick={() => handleTransition(item.id, action)}
-              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition whitespace-nowrap"
-            >
-              {action}
-            </div>
-          ))} */}
-
           {user.role !== AccessRole.USER && (
             <>
               <button
@@ -506,7 +502,7 @@ const WorkflowComponent: React.FC = memo(() => {
               />
             </div>
 
-            {/* New Dropdown for Next Approver */}
+            {/* Next Approver Dropdown */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Next Approver
@@ -526,6 +522,65 @@ const WorkflowComponent: React.FC = memo(() => {
                 ))}
               </select>
             </div>
+
+            {/* Easy Approval Checkbox with label and description */}
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">
+                  Easy Approval
+                </label>
+                <input
+                  type="checkbox"
+                  checked={editData.easyApproval ?? false}
+                  onChange={(e) =>
+                    handleEditChange("easyApproval", e.target.checked)
+                  }
+                />
+              </div>
+              <span className="block text-xs text-gray-600 mt-1">
+                Easy approval means no additional action required of the user to
+                advance the workflow to the next step.
+              </span>
+            </div>
+
+            {/* Conditionally render dropdown and comment when Easy Approval is enabled */}
+            {!editData.easyApproval && (
+              <div className="mt-4 space-y-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Approver Action
+                  </label>
+                  <select
+                    value={editData.approverAction || ""}
+                    onChange={(e) =>
+                      handleEditChange("approverAction", e.target.value)
+                    }
+                    className="w-full border border-gray-300 rounded-lg p-2"
+                  >
+                    <option value="">Select an Action</option>
+                    <option value="Generate Report">Generate Report</option>
+                    <option value="Initiate Communication">
+                      Initiate Communication
+                    </option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Approver Comment
+                  </label>
+                  <input
+                    type="text"
+                    value={editData.approverComment || ""}
+                    onChange={(e) =>
+                      handleEditChange("approverComment", e.target.value)
+                    }
+                    className="w-full border border-gray-300 rounded-lg p-2"
+                    placeholder="Enter comment for the approver"
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <button

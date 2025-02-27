@@ -33,6 +33,16 @@ const TaskSheet: React.FC = () => {
   const [pendingTask, setPendingTask] = useState<any>(null);
   const [comment, setComment] = useState("");
 
+  const [reportFile, setReportFile] = useState<File | null>(null);
+  const [certified, setCertified] = useState(false);
+
+  const handleReportUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setReportFile(files[0]);
+    }
+  };
+
   // Filter tasks assigned to the current user.
   useEffect(() => {
     if (rowData && user) {
@@ -247,34 +257,118 @@ const TaskSheet: React.FC = () => {
                             </Button>
                           </Link>
                         </div>
-                        {/* Render the comment input when an action is pending for this task */}
                         {pendingTask && pendingTask.id === task.id && (
                           <div className="mt-4 border p-2 rounded">
-                            <h4 className="text-md font-semibold mb-2">
-                              Comment is required:
-                            </h4>
-                            <textarea
-                              className="w-full p-2 border rounded"
-                              placeholder="Enter your comment..."
-                              value={comment}
-                              onChange={(e) => setComment(e.target.value)}
-                              rows={4}
-                            />
-                            <div className="mt-2 flex space-x-2">
-                              <Button
-                                variant="outline"
-                                onClick={handleSubmitAction}
-                                disabled={!comment.trim()}
-                              >
-                                Submit
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                onClick={resetPendingAction}
-                              >
-                                Cancel
-                              </Button>
-                            </div>
+                            {(() => {
+                              // Retrieve the current workflow item for this task.
+                              const currentWorkflowItem = Object.values(
+                                workflowState.items
+                              ).find(
+                                (item: any) =>
+                                  item.name === pendingTask.workflow.currentStep
+                              );
+                              return (
+                                <>
+                                  {/* If the step is not easyApproval and has an approverComment, show instructions */}
+                                  {currentWorkflowItem &&
+                                    !currentWorkflowItem.easyApproval &&
+                                    currentWorkflowItem.approverComment && (
+                                      <div className="mb-2">
+                                        <h4 className="text-md font-semibold">
+                                          Instruction:
+                                        </h4>
+                                        <p className="text-sm text-gray-600">
+                                          {currentWorkflowItem.approverComment}
+                                        </p>
+                                      </div>
+                                    )}
+
+                                  {currentWorkflowItem &&
+                                    currentWorkflowItem.approverAction ===
+                                      "Generate Report" && (
+                                      <>
+                                        <h4 className="text-md font-semibold mb-2">
+                                          Upload Report:
+                                        </h4>
+                                        {reportFile ? (
+                                          <p className="text-green-600">
+                                            Report uploaded: {reportFile.name}
+                                          </p>
+                                        ) : (
+                                          <input
+                                            type="file"
+                                            accept="application/pdf,image/*"
+                                            onChange={handleReportUpload}
+                                          />
+                                        )}
+                                      </>
+                                    )}
+                                  {currentWorkflowItem &&
+                                    (currentWorkflowItem.approverAction ===
+                                      "Initiate Communication" ||
+                                      currentWorkflowItem.approverAction ===
+                                        "Other") && (
+                                      <div className="flex items-center mt-2">
+                                        <input
+                                          type="checkbox"
+                                          checked={certified}
+                                          onChange={(e) =>
+                                            setCertified(e.target.checked)
+                                          }
+                                        />
+                                        <span className="ml-2 text-xs text-gray-600">
+                                          I certify that the above
+                                          requirement(s) have been settled
+                                          correctly and this request can be
+                                          advanced.
+                                        </span>
+                                      </div>
+                                    )}
+                                  <div className="mt-4">
+                                    <h4 className="text-md font-semibold mb-2">
+                                      Comment is required:
+                                    </h4>
+                                    <textarea
+                                      className="w-full p-2 border rounded"
+                                      placeholder="Enter your comment..."
+                                      value={comment}
+                                      onChange={(e) =>
+                                        setComment(e.target.value)
+                                      }
+                                      rows={4}
+                                    />
+                                  </div>
+                                  <div className="mt-2 flex space-x-2">
+                                    <Button
+                                      variant="outline"
+                                      onClick={handleSubmitAction}
+                                      disabled={
+                                        !comment.trim() ||
+                                        (currentWorkflowItem &&
+                                        currentWorkflowItem.approverAction ===
+                                          "Generate Report"
+                                          ? !reportFile
+                                          : currentWorkflowItem &&
+                                            (currentWorkflowItem.approverAction ===
+                                              "Initiate Communication" ||
+                                              currentWorkflowItem.approverAction ===
+                                                "Other")
+                                          ? !certified
+                                          : false)
+                                      }
+                                    >
+                                      Submit
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      onClick={resetPendingAction}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
