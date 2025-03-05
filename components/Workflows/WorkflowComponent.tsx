@@ -360,15 +360,6 @@ const WorkflowComponent: React.FC = memo(() => {
     setNeedsSave(true);
   };
 
-  const handleApprovalTrigger = (itemId: string) => {
-    const item = state.items[itemId];
-    console.log("Approval event triggered:", item.onApproval);
-  };
-  const handleRejectionTrigger = (itemId: string) => {
-    const item = state.items[itemId];
-    console.log("Rejection event triggered:", item.onRejection);
-  };
-
   const renderItem = (itemId: string): JSX.Element => {
     if (!state.items || !state.items[itemId]) return <></>;
     const item = state.items[itemId];

@@ -123,6 +123,8 @@ const TaskSheet: React.FC = () => {
             `Request approved. Moved to step: ${nextItem.name}. Prev Approver: ${nextItem.prevApprover}, Next Approver: ${nextItem.nextApprover}.`,
             "success"
           );
+
+          console.log("APPROVAL event triggered:", nextItem.onApproval);
         } else {
           showToast("Next workflow step not found.", "error");
           resetPendingAction();
@@ -169,6 +171,8 @@ const TaskSheet: React.FC = () => {
         `Request rejected. Moved back to step: ${parentWorkflowItem.name}. Next Approver: ${pendingTask["Previous Approver"]}`,
         "error"
       );
+
+      console.log("REJECTION event triggered:", parentWorkflowItem.onRejection);
     }
 
     // Update the task in rowData.
