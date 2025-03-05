@@ -67,6 +67,10 @@ const WorkflowComponent: React.FC = memo(() => {
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  // **** NEW Save As dialog state ****
+  const [isSaveAsDialogOpen, setIsSaveAsDialogOpen] = useState(false);
+  const [newSaveAsName, setNewSaveAsName] = useState<string>("");
+
   // Toggle collapse state for an item
   const toggleCollapse = (itemId: string) => {
     setCollapsedItems((prev) => {
@@ -176,7 +180,7 @@ const WorkflowComponent: React.FC = memo(() => {
     if (newWorkflowName.trim()) {
       const newWorkflowState = {
         rootItem: undefined, // No root item initially
-        name: "New Workflow",
+        name: newWorkflowName,
         items: {}, // Empty items list
         workflowKey: workflowKey.trim(),
         workflowDescription: workflowDescription.trim(),
@@ -209,6 +213,27 @@ const WorkflowComponent: React.FC = memo(() => {
     setWorkflowKey("");
     setWorkflowDescription("");
     setNewWorkflowName("");
+  };
+
+  // **** NEW: Open Save As dialog ****
+  const handleOpenSaveAsDialog = () => {
+    if (currentWorkflowName) {
+      setIsSaveAsDialogOpen(true);
+    }
+  };
+
+  // **** NEW: Save As functionality ****
+  const handleSaveAs = () => {
+    if (!newSaveAsName.trim()) {
+      showToast("Please provide a valid name", "error");
+      return;
+    }
+    // Use the current workflow state to save under the new name.
+    saveWorkflow(newSaveAsName);
+    setCurrentWorkflowName(newSaveAsName);
+    showToast(`Workflow saved as "${newSaveAsName}"`, "success");
+    setNewSaveAsName("");
+    setIsSaveAsDialogOpen(false);
   };
 
   useEffect(() => {
@@ -429,27 +454,6 @@ const WorkflowComponent: React.FC = memo(() => {
     );
   };
 
-  // useEffect(() => {
-  //   console.log(
-  //     "Syncing metadata:",
-  //     state.workflowKey,
-  //     state.workflowDescription
-  //   );
-
-  //   if (state.workflowKey !== workflowKey) {
-  //     setWorkflowKey(state.workflowKey || ""); // Sync workflowKey
-  //   }
-
-  //   if (state.workflowDescription !== workflowDescription) {
-  //     setWorkflowDescription(state.workflowDescription || ""); // Sync workflowDescription
-  //   }
-  // }, [
-  //   state.workflowKey,
-  //   state.workflowDescription,
-  //   workflowKey,
-  //   workflowDescription,
-  // ]);
-
   return (
     <div className="p-6 mx-4 bg-slate-200 rounded-xl shadow-md space-y-4 ">
       <RequestToast />
@@ -480,117 +484,33 @@ const WorkflowComponent: React.FC = memo(() => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/*  Save As Dialog  */}
+      <Dialog open={isSaveAsDialogOpen} onOpenChange={setIsSaveAsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Item</DialogTitle>
+            <DialogTitle>Save As Workflow</DialogTitle>
             <DialogDescription>
-              Modify the details for this workflow item.
+              Enter a new name to save this workflow as a copy:
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Name
-              </label>
-              <input
-                type="text"
-                value={editData.name || ""}
-                onChange={(e) => handleEditChange("name", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-2"
-              />
-            </div>
-
-            {/* Next Approver Dropdown */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Next Approver
-              </label>
-              <select
-                value={editData.nextApprover || ""}
-                onChange={(e) =>
-                  handleEditChange("nextApprover", e.target.value)
-                }
-                className="w-full border border-gray-300 rounded-lg p-2"
-              >
-                <option value="">Select Next Approver</option>
-                {USERS.map((u) => (
-                  <option key={u.name} value={u.name}>
-                    {u.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Easy Approval Checkbox with label and description */}
-            <div>
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700">
-                  Easy Approval
-                </label>
-                <input
-                  type="checkbox"
-                  checked={editData.easyApproval ?? false}
-                  onChange={(e) =>
-                    handleEditChange("easyApproval", e.target.checked)
-                  }
-                />
-              </div>
-              <span className="block text-xs text-gray-600 mt-1">
-                Easy approval means no additional action required of the user to
-                advance the workflow to the next step.
-              </span>
-            </div>
-
-            {/* Conditionally render dropdown and comment when Easy Approval is enabled */}
-            {!editData.easyApproval && (
-              <div className="mt-4 space-y-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Approver Action
-                  </label>
-                  <select
-                    value={editData.approverAction || ""}
-                    onChange={(e) =>
-                      handleEditChange("approverAction", e.target.value)
-                    }
-                    className="w-full border border-gray-300 rounded-lg p-2"
-                  >
-                    <option value="">Select an Action</option>
-                    <option value="Generate Report">Generate Report</option>
-                    <option value="Initiate Communication">
-                      Initiate Communication
-                    </option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Approver Comment
-                  </label>
-                  <input
-                    type="text"
-                    value={editData.approverComment || ""}
-                    onChange={(e) =>
-                      handleEditChange("approverComment", e.target.value)
-                    }
-                    className="w-full border border-gray-300 rounded-lg p-2"
-                    placeholder="Enter comment for the approver"
-                  />
-                </div>
-              </div>
-            )}
+            <input
+              type="text"
+              value={newSaveAsName}
+              onChange={(e) => setNewSaveAsName(e.target.value)}
+              className="border border-gray-300 rounded-lg p-2 w-full"
+              placeholder="Enter new workflow name"
+            />
           </div>
           <DialogFooter>
             <button
-              onClick={handleSaveEdit}
-              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+              onClick={handleSaveAs}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
             >
               Save
             </button>
             <button
-              onClick={handleCancelEdit}
+              onClick={() => setIsSaveAsDialogOpen(false)}
               className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 transition"
             >
               Cancel
@@ -699,6 +619,8 @@ const WorkflowComponent: React.FC = memo(() => {
                 />
               </div>
             </div>
+
+            {/* Top Buttons */}
             <div className="flex space-x-2">
               {user.role !== AccessRole.USER && (
                 <>
@@ -707,6 +629,13 @@ const WorkflowComponent: React.FC = memo(() => {
                     className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
                   >
                     Save
+                  </button>
+                  {/* **** NEW: Save As Button **** */}
+                  <button
+                    onClick={handleOpenSaveAsDialog}
+                    className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition"
+                  >
+                    Save As
                   </button>
                   <button
                     onClick={handleOpenDeleteDialog}
