@@ -215,14 +215,12 @@ const WorkflowComponent: React.FC = memo(() => {
     setNewWorkflowName("");
   };
 
-  // **** NEW: Open Save As dialog ****
   const handleOpenSaveAsDialog = () => {
     if (currentWorkflowName) {
       setIsSaveAsDialogOpen(true);
     }
   };
 
-  // **** NEW: Save As functionality ****
   const handleSaveAs = () => {
     if (!newSaveAsName.trim()) {
       showToast("Please provide a valid name", "error");
@@ -416,14 +414,14 @@ const WorkflowComponent: React.FC = memo(() => {
           )}
         </div>
         <div className="flex flex-wrap space-x-2 mt-2">
+          <button
+            onClick={() => handleEditClick(item.id)}
+            className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition"
+          >
+            {user.role === AccessRole.USER ? "View" : "Edit"}
+          </button>
           {user.role !== AccessRole.USER && (
             <>
-              <button
-                onClick={() => handleEditClick(item.id)}
-                className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition"
-              >
-                Edit
-              </button>
               <button
                 onClick={() => handleInsertAfter(item.id)}
                 className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition whitespace-nowrap"
@@ -457,6 +455,131 @@ const WorkflowComponent: React.FC = memo(() => {
   return (
     <div className="p-6 mx-4 bg-slate-200 rounded-xl shadow-md space-y-4 ">
       <RequestToast />
+
+      {/* Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Item</DialogTitle>
+            <DialogDescription>
+              Modify the details for this workflow item.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Name
+              </label>
+              <input
+                type="text"
+                value={editData.name || ""}
+                onChange={(e) => handleEditChange("name", e.target.value)}
+                className="w-full border border-gray-300 rounded-lg p-2"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Next Approver
+              </label>
+              <select
+                value={editData.nextApprover || ""}
+                onChange={(e) =>
+                  handleEditChange("nextApprover", e.target.value)
+                }
+                className="w-full border border-gray-300 rounded-lg p-2"
+              >
+                <option value="">Select Next Approver</option>
+                {USERS.map((u) => (
+                  <option key={u.name} value={u.name}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">
+                  Easy Approval
+                </label>
+                <input
+                  type="checkbox"
+                  checked={editData.easyApproval ?? false}
+                  onChange={(e) =>
+                    handleEditChange("easyApproval", e.target.checked)
+                  }
+                />
+              </div>
+              <span className="block text-xs text-gray-600 mt-1">
+                Easy approval means no additional action required of the user to
+                advance the workflow to the next step.
+              </span>
+            </div>
+            {!editData.easyApproval && (
+              <div className="mt-4 space-y-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Approver Action
+                  </label>
+                  <select
+                    value={editData.approverAction || ""}
+                    onChange={(e) =>
+                      handleEditChange("approverAction", e.target.value)
+                    }
+                    className="w-full border border-gray-300 rounded-lg p-2"
+                  >
+                    <option value="">Select an Action</option>
+                    <option value="Generate Report">Generate Report</option>
+                    <option value="Initiate Communication">
+                      Initiate Communication
+                    </option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Approver Comment
+                  </label>
+                  <input
+                    type="text"
+                    value={editData.approverComment || ""}
+                    onChange={(e) =>
+                      handleEditChange("approverComment", e.target.value)
+                    }
+                    className="w-full border border-gray-300 rounded-lg p-2"
+                    placeholder="Enter comment for the approver"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            {user.role === AccessRole.USER ? (
+              <button
+                onClick={handleCancelEdit}
+                className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 transition"
+              >
+                Close
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 transition"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Workflow Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
@@ -593,8 +716,8 @@ const WorkflowComponent: React.FC = memo(() => {
         <>
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold">{currentWorkflowName}</h1>
-            <div className="flex space-y-4 border space-x-4">
-              <div className="flex items-center space-x-4">
+            <div className="flex flex-nowrap border space-x-4">
+              <div className="flex flex-nowrap items-center space-x-4">
                 <label className="block text-sm font-medium text-gray-700">
                   Workflow Key:
                 </label>
@@ -606,7 +729,7 @@ const WorkflowComponent: React.FC = memo(() => {
                   placeholder="Enter workflow key here"
                 />
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-nowrap items-center space-x-2 mt-0">
                 <label className="block text-sm font-medium text-gray-700">
                   Description:
                 </label>
