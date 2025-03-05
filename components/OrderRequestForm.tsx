@@ -280,7 +280,9 @@ const OrderRequestForm = () => {
       const firstStep = workflowState.items[workflowState.rootItem];
       const currentStatus = firstStep?.name || "Draft";
       const nextApprover = firstStep?.nextApprover || "";
-      setCurrentWorkflowName(workflowState.name);
+      if (!workflowState.name?.trim()) {
+        setCurrentWorkflowName(workflowState.name);
+      }
       setFormValues((prev) => ({
         ...prev,
         "Request Creator": user.name,
@@ -430,7 +432,9 @@ const OrderRequestForm = () => {
                         onValueChange={(value) => handleWorkflowChange(value)}
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Workflow" />
+                          <SelectValue placeholder="Select Workflow">
+                            {currentWorkflowName}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {savedWorkflows.map((workflowName) => (

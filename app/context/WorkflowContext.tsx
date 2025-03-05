@@ -21,6 +21,8 @@ export interface WorkflowItemState {
   easyApproval: boolean;
   approverAction?: string;
   approverComment?: string;
+  onApproval?: string;
+  onRejection?: string;
 }
 
 export interface WorkflowState {

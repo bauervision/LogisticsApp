@@ -360,6 +360,15 @@ const WorkflowComponent: React.FC = memo(() => {
     setNeedsSave(true);
   };
 
+  const handleApprovalTrigger = (itemId: string) => {
+    const item = state.items[itemId];
+    console.log("Approval event triggered:", item.onApproval);
+  };
+  const handleRejectionTrigger = (itemId: string) => {
+    const item = state.items[itemId];
+    console.log("Rejection event triggered:", item.onRejection);
+  };
+
   const renderItem = (itemId: string): JSX.Element => {
     if (!state.items || !state.items[itemId]) return <></>;
     const item = state.items[itemId];
@@ -462,10 +471,13 @@ const WorkflowComponent: React.FC = memo(() => {
           <DialogHeader>
             <DialogTitle>Edit Item</DialogTitle>
             <DialogDescription>
-              Modify the details for this workflow item.
+              {user.role === AccessRole.USER
+                ? "Viewing details (read-only)"
+                : "Modify the details for this workflow item."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Existing fields such as Name, Next Approver, Easy Approval, etc. */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Name
@@ -473,7 +485,12 @@ const WorkflowComponent: React.FC = memo(() => {
               <input
                 type="text"
                 value={editData.name || ""}
-                onChange={(e) => handleEditChange("name", e.target.value)}
+                onChange={
+                  user.role === AccessRole.USER
+                    ? undefined
+                    : (e) => handleEditChange("name", e.target.value)
+                }
+                disabled={user.role === AccessRole.USER}
                 className="w-full border border-gray-300 rounded-lg p-2"
               />
             </div>
@@ -483,9 +500,12 @@ const WorkflowComponent: React.FC = memo(() => {
               </label>
               <select
                 value={editData.nextApprover || ""}
-                onChange={(e) =>
-                  handleEditChange("nextApprover", e.target.value)
+                onChange={
+                  user.role === AccessRole.USER
+                    ? undefined
+                    : (e) => handleEditChange("nextApprover", e.target.value)
                 }
+                disabled={user.role === AccessRole.USER}
                 className="w-full border border-gray-300 rounded-lg p-2"
               >
                 <option value="">Select Next Approver</option>
@@ -504,9 +524,13 @@ const WorkflowComponent: React.FC = memo(() => {
                 <input
                   type="checkbox"
                   checked={editData.easyApproval ?? false}
-                  onChange={(e) =>
-                    handleEditChange("easyApproval", e.target.checked)
+                  onChange={
+                    user.role === AccessRole.USER
+                      ? undefined
+                      : (e) =>
+                          handleEditChange("easyApproval", e.target.checked)
                   }
+                  disabled={user.role === AccessRole.USER}
                 />
               </div>
               <span className="block text-xs text-gray-600 mt-1">
@@ -522,9 +546,13 @@ const WorkflowComponent: React.FC = memo(() => {
                   </label>
                   <select
                     value={editData.approverAction || ""}
-                    onChange={(e) =>
-                      handleEditChange("approverAction", e.target.value)
+                    onChange={
+                      user.role === AccessRole.USER
+                        ? undefined
+                        : (e) =>
+                            handleEditChange("approverAction", e.target.value)
                     }
+                    disabled={user.role === AccessRole.USER}
                     className="w-full border border-gray-300 rounded-lg p-2"
                   >
                     <option value="">Select an Action</option>
@@ -542,15 +570,162 @@ const WorkflowComponent: React.FC = memo(() => {
                   <input
                     type="text"
                     value={editData.approverComment || ""}
-                    onChange={(e) =>
-                      handleEditChange("approverComment", e.target.value)
+                    onChange={
+                      user.role === AccessRole.USER
+                        ? undefined
+                        : (e) =>
+                            handleEditChange("approverComment", e.target.value)
                     }
+                    disabled={user.role === AccessRole.USER}
                     className="w-full border border-gray-300 rounded-lg p-2"
                     placeholder="Enter comment for the approver"
                   />
                 </div>
               </div>
             )}
+
+            {/* Event Fields: On Approval and On Rejection */}
+            <div className="flex space-x-4 mt-4">
+              {/* On Approval */}
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  On Approval
+                </label>
+                <select
+                  value={editData.onApproval?.eventType || ""}
+                  onChange={
+                    user.role === AccessRole.USER
+                      ? undefined
+                      : (e) =>
+                          handleEditChange("onApproval", {
+                            ...editData.onApproval,
+                            eventType: e.target.value,
+                          })
+                  }
+                  disabled={user.role === AccessRole.USER}
+                  className="w-full border border-gray-300 rounded-lg p-2"
+                >
+                  <option value="">Select Event</option>
+                  <option value="Email Notification">Email Notification</option>
+                  <option value="Server Update">Server Update</option>
+                  <option value="Run Report">Run Report</option>
+                </select>
+                {editData.onApproval?.eventType && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Enter comment"
+                      value={editData.onApproval?.comment || ""}
+                      onChange={
+                        user.role === AccessRole.USER
+                          ? undefined
+                          : (e) =>
+                              handleEditChange("onApproval", {
+                                ...editData.onApproval,
+                                comment: e.target.value,
+                              })
+                      }
+                      disabled={user.role === AccessRole.USER}
+                      className="w-full border border-gray-300 rounded-lg p-2 mt-2"
+                    />
+                    {editData.onApproval?.eventType ===
+                      "Email Notification" && (
+                      <select
+                        value={editData.onApproval?.emailRecipient || ""}
+                        onChange={
+                          user.role === AccessRole.USER
+                            ? undefined
+                            : (e) =>
+                                handleEditChange("onApproval", {
+                                  ...editData.onApproval,
+                                  emailRecipient: e.target.value,
+                                })
+                        }
+                        disabled={user.role === AccessRole.USER}
+                        className="w-full border border-gray-300 rounded-lg p-2 mt-2"
+                      >
+                        <option value="">Select Recipient</option>
+                        {USERS.map((u) => (
+                          <option key={u.name} value={u.name}>
+                            {u.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* On Rejection */}
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  On Rejection
+                </label>
+                <select
+                  value={editData.onRejection?.eventType || ""}
+                  onChange={
+                    user.role === AccessRole.USER
+                      ? undefined
+                      : (e) =>
+                          handleEditChange("onRejection", {
+                            ...editData.onRejection,
+                            eventType: e.target.value,
+                          })
+                  }
+                  disabled={user.role === AccessRole.USER}
+                  className="w-full border border-gray-300 rounded-lg p-2"
+                >
+                  <option value="">Select Event</option>
+                  <option value="Email Notification">Email Notification</option>
+                  <option value="Server Update">Server Update</option>
+                  <option value="Run Report">Run Report</option>
+                </select>
+                {editData.onRejection?.eventType && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Enter comment"
+                      value={editData.onRejection?.comment || ""}
+                      onChange={
+                        user.role === AccessRole.USER
+                          ? undefined
+                          : (e) =>
+                              handleEditChange("onRejection", {
+                                ...editData.onRejection,
+                                comment: e.target.value,
+                              })
+                      }
+                      disabled={user.role === AccessRole.USER}
+                      className="w-full border border-gray-300 rounded-lg p-2 mt-2"
+                    />
+                    {editData.onRejection?.eventType ===
+                      "Email Notification" && (
+                      <select
+                        value={editData.onRejection?.emailRecipient || ""}
+                        onChange={
+                          user.role === AccessRole.USER
+                            ? undefined
+                            : (e) =>
+                                handleEditChange("onRejection", {
+                                  ...editData.onRejection,
+                                  emailRecipient: e.target.value,
+                                })
+                        }
+                        disabled={user.role === AccessRole.USER}
+                        className="w-full border border-gray-300 rounded-lg p-2 mt-2"
+                      >
+                        <option value="">Select Recipient</option>
+                        {USERS.map((u) => (
+                          <option key={u.name} value={u.name}>
+                            {u.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           </div>
           <DialogFooter>
             {user.role === AccessRole.USER ? (
