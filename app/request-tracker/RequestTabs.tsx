@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { useWorkflow } from "@/app/context/WorkflowContext";
 import {
   Card,
   CardContent,
@@ -39,6 +40,7 @@ import {
 import { WorkflowItemState } from "../context/WorkflowContext";
 
 export function RequestTabs() {
+  const { state: workflowState } = useWorkflow();
   const { selectedRow } = useRequestContext();
   const { rowData, setRowData } = useSchema();
   const { fetchWithToast } = useFetchWithToast();
@@ -59,6 +61,10 @@ export function RequestTabs() {
     "approve" | "reject" | null
   >(null);
   const [comment, setComment] = useState("");
+
+  // New state variables for additional UI elements:
+  const [reportFile, setReportFile] = useState<File | null>(null);
+  const [certified, setCertified] = useState(false);
 
   const [isDocDialogOpen, setIsDocDialogOpen] = useState(false);
   // ----- NEW: Documents state -----
@@ -99,6 +105,14 @@ export function RequestTabs() {
 
   // Get the documents array from the request (or an empty array if none).
   const documents: string[] = selectedRow?.["Documents"] || [];
+
+  // File upload handler (same as in TaskSheet)
+  const handleReportUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setReportFile(files[0]);
+    }
+  };
 
   // Handlers for Requested Items.
   const handleRequestItemChange = (
@@ -281,50 +295,61 @@ export function RequestTabs() {
       return;
     }
 
-    // Format the comment
     const timestamp = new Date().toLocaleString();
     const formattedComment = `[${selectedRow.workflow.currentStep}] "${comment}" - ${user.name} ${timestamp}`;
 
-    // Make a copy of the request
+    // Copy current request
     let updatedRequest = { ...selectedRow };
 
-    // Get current step and orderedSteps from the workflow
-    const { currentStep, orderedSteps } = selectedRow.workflow;
-    const currentIndex = orderedSteps.indexOf(currentStep);
+    // Get current workflow item from workflowState
+    const currentWorkflowItem = Object.values(workflowState.items).find(
+      (item: any) => item.name === selectedRow.workflow.currentStep
+    );
 
-    if (currentIndex === -1) {
-      showToast("Current workflow step not found in ordered steps.", "error");
+    if (!currentWorkflowItem) {
+      showToast("Current workflow step not found.", "error");
       setPendingAction(null);
       return;
     }
 
     if (pendingAction === "approve") {
-      if (currentIndex < orderedSteps.length - 1) {
-        const nextStep = orderedSteps[currentIndex + 1];
-        console.log("NextStep", nextStep);
-        updatedRequest.workflow.currentStep = nextStep;
-        updatedRequest["Next Step Approver"] = nextStep["Next Step Approver"]; // You may update this if you have a mapping for next approvers
-        updatedRequest["Previous Approver"] = user.name;
-        updatedRequest["Request Status"] = nextStep;
-        showToast(`Request approved. Moved to step: ${nextStep}.`, "success");
+      if (currentWorkflowItem.children.length > 0) {
+        const nextItemId = currentWorkflowItem.children[0];
+        const nextItem = workflowState.items[nextItemId];
+
+        if (nextItem) {
+          updatedRequest = {
+            ...updatedRequest,
+            workflow: {
+              ...updatedRequest.workflow,
+              currentStep: nextItem.name,
+            },
+            "Next Step Approver": nextItem.nextApprover || "",
+            "Previous Approver": user.name,
+            "Request Status": nextItem.name,
+          };
+          showToast(
+            `Request approved. Moved to step: ${nextItem.name}. Prev Approver: ${nextItem.prevApprover}, Next Approver: ${nextItem.nextApprover}.`,
+            "success"
+          );
+          console.log("APPROVAL event triggered:", nextItem.onApproval);
+        } else {
+          showToast("Next workflow step not found.", "error");
+          setPendingAction(null);
+          return;
+        }
       } else {
         showToast("This request is already at the final step.", "info");
         setPendingAction(null);
         return;
       }
     } else if (pendingAction === "reject") {
-      if (currentIndex > 0) {
-        const previousStep = orderedSteps[currentIndex - 1];
-        updatedRequest.workflow.currentStep = previousStep;
-        updatedRequest["Next Step Approver"] =
-          selectedRow["Previous Approver"] || "";
-        updatedRequest["Previous Approver"] = user.name;
-        updatedRequest["Request Status"] = previousStep;
-        showToast(
-          `Request rejected. Moved back to step: ${previousStep}.`,
-          "error"
-        );
-      } else {
+      // Find the parent workflow item.
+      const parentWorkflowItem = Object.values(workflowState.items).find(
+        (item: any) =>
+          item.children && item.children.includes(currentWorkflowItem.id)
+      );
+      if (!parentWorkflowItem) {
         showToast(
           "Cannot reject request. Already at the initial step.",
           "info"
@@ -332,6 +357,21 @@ export function RequestTabs() {
         setPendingAction(null);
         return;
       }
+      updatedRequest = {
+        ...updatedRequest,
+        workflow: {
+          ...updatedRequest.workflow,
+          currentStep: parentWorkflowItem.name,
+        },
+        "Next Step Approver": selectedRow["Previous Approver"],
+        "Previous Approver": user.name,
+        "Request Status": parentWorkflowItem.name,
+      };
+      showToast(
+        `Request rejected. Moved back to step: ${parentWorkflowItem.name}. Next Approver: ${selectedRow["Previous Approver"]}`,
+        "error"
+      );
+      console.log("REJECTION event triggered:", parentWorkflowItem.onRejection);
     }
 
     // Append the comment
@@ -347,10 +387,11 @@ export function RequestTabs() {
         r.id === updatedRequest.id ? updatedRequest : r
       );
       setRowData(updatedRowData);
-
       // Reset state
       setPendingAction(null);
       setComment("");
+      setReportFile(null);
+      setCertified(false);
     }
   };
 
@@ -826,21 +867,111 @@ export function RequestTabs() {
             </div>
           ) : (
             <div className="mt-4">
-              <h4 className="text-md font-semibold mb-2">
-                Comment is required:
-              </h4>
-              <textarea
-                className="w-full p-2 border rounded"
-                placeholder="Enter your comment..."
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                rows={4}
-              />
+              {(() => {
+                const currentWorkflowItem = Object.values(
+                  workflowState.items
+                ).find(
+                  (item: any) => item.name === selectedRow.workflow.currentStep
+                );
+                return (
+                  <>
+                    {/* Display instructions if available */}
+                    {currentWorkflowItem &&
+                      !currentWorkflowItem.easyApproval &&
+                      currentWorkflowItem.approverComment && (
+                        <div className="mb-2">
+                          <h4 className="text-md font-semibold">
+                            Instruction:
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {currentWorkflowItem.approverComment}
+                          </p>
+                        </div>
+                      )}
+                    {/* File upload for Generate Report action */}
+                    {currentWorkflowItem &&
+                      currentWorkflowItem.approverAction ===
+                        "Generate Report" && (
+                        <>
+                          <h4 className="text-md font-semibold mb-2">
+                            Upload Report:
+                          </h4>
+                          {reportFile ? (
+                            <p className="text-green-600">
+                              Report uploaded: {reportFile.name}
+                            </p>
+                          ) : (
+                            <input
+                              type="file"
+                              accept="application/pdf,image/*"
+                              onChange={handleReportUpload}
+                            />
+                          )}
+                        </>
+                      )}
+                    {/* Certification checkbox for Initiate Communication or Other actions */}
+                    {currentWorkflowItem &&
+                      (currentWorkflowItem.approverAction ===
+                        "Initiate Communication" ||
+                        currentWorkflowItem.approverAction === "Other") && (
+                        <div className="flex items-center mt-2">
+                          <input
+                            type="checkbox"
+                            checked={certified}
+                            onChange={(e) => setCertified(e.target.checked)}
+                          />
+                          <span className="ml-2 text-xs text-gray-600">
+                            I certify that the above requirement(s) have been
+                            settled correctly and this request can be advanced.
+                          </span>
+                        </div>
+                      )}
+                  </>
+                );
+              })()}
+              <div className="mt-4">
+                <h4 className="text-md font-semibold mb-2">
+                  Comment is required:
+                </h4>
+                <textarea
+                  className="w-full p-2 border rounded"
+                  placeholder="Enter your comment..."
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  rows={4}
+                />
+              </div>
               <div className="mt-2 flex space-x-2">
                 <Button
                   variant="outline"
                   onClick={handleSubmitAction}
-                  disabled={!comment.trim()}
+                  disabled={
+                    !comment.trim() ||
+                    (workflowState &&
+                      (() => {
+                        const currentWorkflowItem = Object.values(
+                          workflowState.items
+                        ).find(
+                          (item: any) =>
+                            item.name === selectedRow.workflow.currentStep
+                        );
+                        if (!currentWorkflowItem) return false;
+                        if (
+                          currentWorkflowItem.approverAction ===
+                            "Generate Report" &&
+                          !reportFile
+                        )
+                          return true;
+                        if (
+                          (currentWorkflowItem.approverAction ===
+                            "Initiate Communication" ||
+                            currentWorkflowItem.approverAction === "Other") &&
+                          !certified
+                        )
+                          return true;
+                        return false;
+                      })())
+                  }
                 >
                   Submit
                 </Button>
@@ -849,6 +980,8 @@ export function RequestTabs() {
                   onClick={() => {
                     setPendingAction(null);
                     setComment("");
+                    setReportFile(null);
+                    setCertified(false);
                   }}
                 >
                   Cancel
