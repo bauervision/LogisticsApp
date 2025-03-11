@@ -1,8 +1,9 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useSchema, SchemaItem } from "@/app/context/SchemaContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { useUser } from "../context/UserContext";
+import { AccessRole } from "../constants";
 
 interface OrderFormProps {
   order: { [key: string]: any };
@@ -10,6 +11,7 @@ interface OrderFormProps {
 }
 
 const OrderForm: React.FC<OrderFormProps> = ({ order, onFieldChange }) => {
+  const { user } = useUser();
   const { schema } = useSchema();
 
   // Log the order data on mount
@@ -71,7 +73,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ order, onFieldChange }) => {
             <Input
               type="date"
               value={isoValue}
-              disabled={field.readOnly}
+              disabled={field.readOnly || !canEditRequestStep}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 // Convert back to MM-DD-YYYY when updating.
                 onFieldChange(fieldName, toMDY(e.target.value))
@@ -86,7 +88,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ order, onFieldChange }) => {
           <Input
             id={fieldName}
             value={fieldValue}
-            disabled={field.readOnly}
+            disabled={field.readOnly || !canEditRequestStep}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               onFieldChange(fieldName, e.target.value)
             }
@@ -101,6 +103,18 @@ const OrderForm: React.FC<OrderFormProps> = ({ order, onFieldChange }) => {
       </div>
     );
   };
+
+  // Combine access level with the designated step.
+  const canEditRequestStep = useMemo(() => {
+    // Super Admins can edit regardless of the current step.
+    if (user.role === AccessRole.SUPER_ADMIN) {
+      return true;
+    }
+    // For other users, only allow editing if they are the designated nextApprover.
+    // Optionally, you could also check that the request is currently at the step where approval is expected.
+    const currentStep = order.workflow?.currentStep || order["Request Status"];
+    return order["Next Step Approver"] === user.name;
+  }, [user, order]);
 
   return (
     <div className="space-y-6">

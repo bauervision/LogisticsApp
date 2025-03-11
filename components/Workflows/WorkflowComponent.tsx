@@ -13,8 +13,9 @@ import {
 import { useWorkflow } from "@/app/context/WorkflowContext";
 import workflow from "@/app/workflow-engine/workflow";
 import { useUser } from "@/app/context/UserContext";
-import { AccessRole, USERS } from "@/app/constants"; // Import USERS here
+import { AccessRole } from "@/app/constants"; // Import USERS here
 import RequestToast, { showToast } from "../Requests/RequestToast";
+import { useUserManagement } from "@/app/context/UserManagementContext";
 
 const WorkflowComponent: React.FC = memo(() => {
   const {
@@ -32,6 +33,7 @@ const WorkflowComponent: React.FC = memo(() => {
   } = useWorkflow();
 
   const { user } = useUser();
+  const { users, addUser } = useUserManagement();
   const [newItemName, setNewItemName] = useState<string>("");
   const [newWorkflowName, setNewWorkflowName] = useState<string>("");
   const [workflowKey, setWorkflowKey] = useState<string>("");
@@ -500,7 +502,7 @@ const WorkflowComponent: React.FC = memo(() => {
                 className="w-full border border-gray-300 rounded-lg p-2"
               >
                 <option value="">Select Next Approver</option>
-                {USERS.map((u) => (
+                {users.map((u) => (
                   <option key={u.name} value={u.name}>
                     {u.name}
                   </option>
@@ -636,7 +638,7 @@ const WorkflowComponent: React.FC = memo(() => {
                         className="w-full border border-gray-300 rounded-lg p-2 mt-2"
                       >
                         <option value="">Select Recipient</option>
-                        {USERS.map((u) => (
+                        {users.map((u) => (
                           <option key={u.name} value={u.name}>
                             {u.name}
                           </option>
@@ -706,7 +708,7 @@ const WorkflowComponent: React.FC = memo(() => {
                         className="w-full border border-gray-300 rounded-lg p-2 mt-2"
                       >
                         <option value="">Select Recipient</option>
-                        {USERS.map((u) => (
+                        {users.map((u) => (
                           <option key={u.name} value={u.name}>
                             {u.name}
                           </option>

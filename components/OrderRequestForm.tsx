@@ -26,7 +26,6 @@ import RequestToast, { showToast } from "./Requests/RequestToast";
 import { useUser } from "@/app/context/UserContext";
 import {
   FIELD_TYPES,
-  USERS,
   SHIPPING_FIELDS,
   PRODUCTS,
   US_STATES,
@@ -45,6 +44,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { useUserManagement } from "@/app/context/UserManagementContext";
 
 // Date formats mapping.
 const DATE_FORMATS: { [key: string]: string } = {
@@ -63,6 +63,7 @@ export interface RequestItem {
 }
 
 const OrderRequestForm = () => {
+  const { users, addUser } = useUserManagement();
   const { schema, rowData } = useSchema();
   const {
     state,
@@ -487,7 +488,7 @@ const OrderRequestForm = () => {
                           <SelectValue placeholder="Select Next Step Approver" />
                         </SelectTrigger>
                         <SelectContent>
-                          {USERS.map((userObj) => (
+                          {users.map((userObj) => (
                             <SelectItem key={userObj.name} value={userObj.name}>
                               {userObj.name}
                             </SelectItem>

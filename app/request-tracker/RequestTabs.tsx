@@ -37,7 +37,6 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { WorkflowItemState } from "../context/WorkflowContext";
 
 export function RequestTabs() {
   const { state: workflowState } = useWorkflow();
@@ -395,6 +394,19 @@ export function RequestTabs() {
     }
   };
 
+  // Combine access level with the designated step.
+  const canEditRequestStep = useMemo(() => {
+    // Super Admins can edit regardless of the current step.
+    if (user.role === AccessRole.SUPER_ADMIN) {
+      return true;
+    }
+    // For other users, only allow editing if they are the designated nextApprover.
+    // Optionally, you could also check that the request is currently at the step where approval is expected.
+    const currentStep =
+      selectedRow.workflow?.currentStep || selectedRow["Request Status"];
+    return selectedRow["Next Step Approver"] === user.name;
+  }, [user, selectedRow]);
+
   return (
     <>
       {canDelete && (
@@ -474,14 +486,16 @@ export function RequestTabs() {
             <CardContent className="space-y-2">
               {/* Render dynamic order fields */}
               <OrderForm order={order} onFieldChange={handleFieldChange} />
-              <Button
-                type="button"
-                variant="default"
-                className="bg-blue-800 text-white mt-4"
-                onClick={() => handleRequestSave()}
-              >
-                Save Changes
-              </Button>
+              {canEditRequestStep && (
+                <Button
+                  type="button"
+                  variant="default"
+                  className="bg-blue-800 text-white mt-4"
+                  onClick={() => handleRequestSave()}
+                >
+                  Save Changes
+                </Button>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -513,22 +527,24 @@ export function RequestTabs() {
                   <p>No documents available.</p>
                 )}
               </div>
-              {/* Add New Documents Button */}
-              <div className="mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Add New Documents
-                </Button>
-                <input
-                  type="file"
-                  multiple
-                  ref={fileInputRef}
-                  className="hidden"
-                  onChange={handleNewFileUpload}
-                />
-              </div>
+              {/* Add New Documents Button only if canEditRequestStep */}
+              {canEditRequestStep && (
+                <div className="mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Add New Documents
+                  </Button>
+                  <input
+                    type="file"
+                    multiple
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleNewFileUpload}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -552,34 +568,44 @@ export function RequestTabs() {
                     {/* Product Dropdown */}
                     <div className="flex-1">
                       <Label className="text-sm">Product</Label>
-                      <Select
-                        value={item.product || undefined}
-                        onValueChange={(value) => {
-                          const selectedProduct = PRODUCTS.find(
-                            (prod) => prod.product === value
-                          );
-                          handleRequestItemChange(index, "product", value);
-                          if (selectedProduct) {
-                            // Auto-populate the price when a product is selected.
-                            handleRequestItemChange(
-                              index,
-                              "price",
-                              selectedProduct.price
+                      {canEditRequestStep ? (
+                        <Select
+                          value={item.product || ""}
+                          onValueChange={(value) => {
+                            const selectedProduct = PRODUCTS.find(
+                              (prod) => prod.product === value
                             );
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Product" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PRODUCTS.map((prod) => (
-                            <SelectItem key={prod.product} value={prod.product}>
-                              {prod.product}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                            handleRequestItemChange(index, "product", value);
+                            if (selectedProduct) {
+                              // Auto-populate the price when a product is selected.
+                              handleRequestItemChange(
+                                index,
+                                "price",
+                                selectedProduct.price
+                              );
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select Product" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PRODUCTS.map((prod) => (
+                              <SelectItem
+                                key={prod.product}
+                                value={prod.product}
+                              >
+                                {prod.product}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        // Read-only view styled to match the select
+                        <div className="w-full border rounded px-3 py-2 bg-gray-100">
+                          {item.product || "Select Product"}
+                        </div>
+                      )}
                     </div>
                     {/* Price Display */}
                     <div className="flex-1">
@@ -598,6 +624,7 @@ export function RequestTabs() {
                         type="number"
                         placeholder="Amount"
                         value={item.amount}
+                        disabled={!canEditRequestStep}
                         onChange={(e) =>
                           handleRequestItemChange(
                             index,
@@ -617,22 +644,26 @@ export function RequestTabs() {
                         }).format((item.price || 0) * (item.amount || 0))}
                       </div>
                     </div>
-                    <Button
-                      variant="destructive"
-                      type="button"
-                      onClick={() => handleRemoveRequestItem(index)}
-                    >
-                      Remove
-                    </Button>
+                    {canEditRequestStep && (
+                      <Button
+                        variant="destructive"
+                        type="button"
+                        onClick={() => handleRemoveRequestItem(index)}
+                      >
+                        Remove
+                      </Button>
+                    )}
                   </div>
                 ))}
-                <Button
-                  type="button"
-                  onClick={handleAddRequestItem}
-                  className="mt-2"
-                >
-                  Add Request Item
-                </Button>
+                {canEditRequestStep && (
+                  <Button
+                    type="button"
+                    onClick={handleAddRequestItem}
+                    className="mt-2"
+                  >
+                    Add Request Item
+                  </Button>
+                )}
                 {/* Total Amount Field */}
                 <div className="mt-4">
                   <Label className="text-sm">Total Amount</Label>
@@ -645,13 +676,15 @@ export function RequestTabs() {
                 </div>
               </fieldset>
               {/* Save Items Button */}
-              <Button
-                type="button"
-                onClick={handleSaveItems}
-                className="bg-green-600 text-white mt-4"
-              >
-                Save Items
-              </Button>
+              {canEditRequestStep && (
+                <Button
+                  type="button"
+                  onClick={handleSaveItems}
+                  className="bg-green-600 text-white mt-4"
+                >
+                  Save Items
+                </Button>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -848,7 +881,7 @@ export function RequestTabs() {
       </Dialog>
 
       {/* Approval/Reject Section */}
-      {selectedRow["Next Step Approver"] === user.name && (
+      {canEditRequestStep && (
         <div className="p-4 border-t mt-4">
           {!pendingAction ? (
             <div className="flex space-x-4">
@@ -942,6 +975,7 @@ export function RequestTabs() {
                 />
               </div>
               <div className="mt-2 flex space-x-2">
+                {/* Submit Button */}
                 <Button
                   variant="outline"
                   onClick={handleSubmitAction}
@@ -975,6 +1009,7 @@ export function RequestTabs() {
                 >
                   Submit
                 </Button>
+                {/* Cancel Button */}
                 <Button
                   variant="destructive"
                   onClick={() => {

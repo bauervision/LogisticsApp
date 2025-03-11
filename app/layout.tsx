@@ -11,6 +11,7 @@ import { UserProvider } from "./context/UserContext";
 import { WorkflowProvider } from "./context/WorkflowContext";
 import { SchemaProvider } from "./context/SchemaContext";
 import { AccessRole } from "./constants";
+import { UserManagementProvider } from "./context/UserManagementContext";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -39,31 +40,33 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <main>
-          <UserProvider>
-            <ProtectedRoute
-              requiredRoles={[
-                AccessRole.SUPER_ADMIN,
-                AccessRole.ADMIN,
-                AccessRole.USER,
-              ]}
-            >
-              <Navbar />
+          <UserManagementProvider>
+            <UserProvider>
+              <ProtectedRoute
+                requiredRoles={[
+                  AccessRole.SUPER_ADMIN,
+                  AccessRole.ADMIN,
+                  AccessRole.USER,
+                ]}
+              >
+                <Navbar />
 
-              <div>
-                <ToastContextProvider>
-                  <SidebarProvider>
-                    <SideBar />
-                    <SidebarTrigger />
-                    <WorkflowProvider>
-                      <SchemaProvider>
-                        <RequestProvider>{children}</RequestProvider>
-                      </SchemaProvider>
-                    </WorkflowProvider>
-                  </SidebarProvider>
-                </ToastContextProvider>
-              </div>
-            </ProtectedRoute>
-          </UserProvider>
+                <div>
+                  <ToastContextProvider>
+                    <SidebarProvider>
+                      <SideBar />
+                      <SidebarTrigger />
+                      <WorkflowProvider>
+                        <SchemaProvider>
+                          <RequestProvider>{children}</RequestProvider>
+                        </SchemaProvider>
+                      </WorkflowProvider>
+                    </SidebarProvider>
+                  </ToastContextProvider>
+                </div>
+              </ProtectedRoute>
+            </UserProvider>
+          </UserManagementProvider>
         </main>
       </body>
     </html>

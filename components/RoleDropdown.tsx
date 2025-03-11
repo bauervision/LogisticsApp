@@ -9,14 +9,15 @@ import {
 } from "./ui/dropdown-menu";
 import { useUser } from "@/app/context/UserContext";
 import { Button } from "./ui/button";
-import { AccessRole, USERS } from "@/app/constants";
+import { AccessRole } from "@/app/constants";
+import { useUserManagement } from "@/app/context/UserManagementContext";
 
 const RoleDropdown: React.FC = () => {
   const { user, setUser } = useUser();
-  const users = USERS;
+  const { users, addUser } = useUserManagement();
 
   const handleUserChange = (index: number) => {
-    setUser(USERS[index]);
+    setUser(users[index]);
   };
 
   return (
