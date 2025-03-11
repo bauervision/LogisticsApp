@@ -9,6 +9,15 @@ import "ag-grid-community/styles/ag-theme-quartz.css";
 import { AccessRole, User } from "@/app/constants"; // adjust the import path as needed
 import { useUserManagement } from "@/app/context/UserManagementContext";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // Define a UserGroup interface.
 interface UserGroup {
@@ -63,9 +72,26 @@ function AdminUserManagementPage() {
   );
   const [groups, setGroups] = useState<UserGroup[]>([]);
 
-  // Handle change in the multi-select for user group assignment.
+  // For editing an existing group:
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingGroupIndex, setEditingGroupIndex] = useState<number | null>(
+    null
+  );
+  const [editingGroupData, setEditingGroupData] = useState<UserGroup>({
+    name: "",
+    userNames: [],
+  });
+
+  // For delete confirmation
+  const [isDeleteGroupDialogOpen, setIsDeleteGroupDialogOpen] = useState(false);
+  const [groupToDeleteIndex, setGroupToDeleteIndex] = useState<number | null>(
+    null
+  );
+
+  // Handle change in the multi-select for group assignment (both for new and edit)
   const handleGroupUserSelectionChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
+    e: React.ChangeEvent<HTMLSelectElement>,
+    setter: (users: string[]) => void
   ) => {
     const options = e.target.options;
     const selected: string[] = [];
@@ -74,7 +100,7 @@ function AdminUserManagementPage() {
         selected.push(options[i].value);
       }
     }
-    setSelectedUsersForGroup(selected);
+    setter(selected);
   };
 
   // Handler to add a new user group.
@@ -90,6 +116,38 @@ function AdminUserManagementPage() {
     setGroups([...groups, newGroup]);
     setNewGroupName("");
     setSelectedUsersForGroup([]);
+  };
+
+  // Handler for opening the edit dialog.
+  const handleEditGroup = (index: number) => {
+    setEditingGroupIndex(index);
+    setEditingGroupData(groups[index]);
+    setIsEditDialogOpen(true);
+  };
+
+  // Handler for saving changes in the edit dialog.
+  const handleSaveGroupEdit = () => {
+    if (editingGroupIndex === null) return;
+    const updatedGroups = [...groups];
+    updatedGroups[editingGroupIndex] = editingGroupData;
+    setGroups(updatedGroups);
+    setIsEditDialogOpen(false);
+    setEditingGroupIndex(null);
+  };
+
+  // Handler to open delete confirmation dialog.
+  const openDeleteGroupDialog = (index: number) => {
+    setGroupToDeleteIndex(index);
+    setIsDeleteGroupDialogOpen(true);
+  };
+
+  // Handler to delete a group.
+  const handleDeleteGroup = () => {
+    if (groupToDeleteIndex === null) return;
+    const updatedGroups = groups.filter((_, i) => i !== groupToDeleteIndex);
+    setGroups(updatedGroups);
+    setIsDeleteGroupDialogOpen(false);
+    setGroupToDeleteIndex(null);
   };
 
   return (
@@ -161,7 +219,9 @@ function AdminUserManagementPage() {
                 <select
                   multiple
                   value={selectedUsersForGroup}
-                  onChange={handleGroupUserSelectionChange}
+                  onChange={(e) =>
+                    handleGroupUserSelectionChange(e, setSelectedUsersForGroup)
+                  }
                   className="border p-2 rounded h-32"
                 >
                   {users.map((u) => (
@@ -188,11 +248,30 @@ function AdminUserManagementPage() {
               {groups.length > 0 ? (
                 <ul className="space-y-2">
                   {groups.map((group, index) => (
-                    <li key={index} className="border-b pb-2">
-                      <p className="font-semibold">{group.name}</p>
-                      <p className="text-sm">
-                        Users: {group.userNames.join(", ") || "None"}
-                      </p>
+                    <li
+                      key={index}
+                      className="border-b pb-2 flex justify-between items-center"
+                    >
+                      <div>
+                        <p className="font-semibold">{group.name}</p>
+                        <p className="text-sm">
+                          Users: {group.userNames.join(", ") || "None"}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleEditGroup(index)}
+                          className="bg-yellow-500 text-white"
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          onClick={() => openDeleteGroupDialog(index)}
+                          className="bg-red-500 text-white"
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -202,6 +281,96 @@ function AdminUserManagementPage() {
             </div>
           </div>
         </div>
+
+        {/* Edit Group Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Group</DialogTitle>
+              <DialogDescription>
+                Modify the group name and update the assigned users.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-4">
+              <input
+                type="text"
+                placeholder="Group Name"
+                value={editingGroupData.name}
+                onChange={(e) =>
+                  setEditingGroupData({
+                    ...editingGroupData,
+                    name: e.target.value,
+                  })
+                }
+                className="border p-2 rounded"
+              />
+              <Label>Select Users:</Label>
+              <select
+                multiple
+                value={editingGroupData.userNames}
+                onChange={(e) =>
+                  handleGroupUserSelectionChange(e, (selected) =>
+                    setEditingGroupData({
+                      ...editingGroupData,
+                      userNames: selected,
+                    })
+                  )
+                }
+                className="border p-2 rounded h-32"
+              >
+                {users.map((u) => (
+                  <option key={u.name} value={u.name}>
+                    {u.name} ({u.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={handleSaveGroupEdit}
+                className="bg-green-500 text-white"
+              >
+                Save Changes
+              </Button>
+              <Button
+                onClick={() => setIsEditDialogOpen(false)}
+                className="bg-gray-300 text-black"
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Group Confirmation Dialog */}
+        <Dialog
+          open={isDeleteGroupDialogOpen}
+          onOpenChange={setIsDeleteGroupDialogOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Delete Group</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this group? This action cannot
+                be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                onClick={handleDeleteGroup}
+                className="bg-red-500 text-white"
+              >
+                Delete
+              </Button>
+              <Button
+                onClick={() => setIsDeleteGroupDialogOpen(false)}
+                className="bg-gray-300 text-black"
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </RequestsLayout>
   );
