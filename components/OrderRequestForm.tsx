@@ -21,8 +21,8 @@ import { Button } from "@/components/ui/button";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format, parse } from "date-fns";
-import Link from "next/link";
 import RequestToast, { showToast } from "./Requests/RequestToast";
+
 import { useUser } from "@/app/context/UserContext";
 import {
   FIELD_TYPES,
@@ -96,6 +96,14 @@ const OrderRequestForm = () => {
       acc + (item.price || 0) * (item.amount || 0),
     0
   );
+
+  // ----------------------------
+  // Logged in User field update: probably not needed in prod
+  // ----------------------------
+  useEffect(() => {
+    handleInputChange("Request Creator", user.name);
+    handleInputChange("Previous Approver", user.name);
+  }, [user]);
 
   // ----------------------------
   // Workflow Handling
@@ -290,6 +298,7 @@ const OrderRequestForm = () => {
         "Request Workflow": workflowState.name,
         "Request Status": currentStatus,
         "Next Step Approver": nextApprover,
+        "Next Step Approver Groups": firstStep.nextApproverGroups || [],
         "Previous Approver": user.name,
         "Request Created": getFormattedTodayDate("MM-DD-YYYY"),
       }));
@@ -449,12 +458,26 @@ const OrderRequestForm = () => {
                   );
                 }
                 if (field.parameter === "Next Step Approver") {
-                  const defaultNextApprover =
+                  // Retrieve the single next approver from formValues or workflowState
+                  const nextApprover =
                     formValues["Next Step Approver"] ||
                     (workflowState.rootItem &&
                       workflowState.items[workflowState.rootItem]
                         ?.nextApprover) ||
-                    "";
+                    "Unassigned! Please Check Workflow Assignments";
+
+                  // Check if the approver is unassigned
+                  const isUnassigned =
+                    nextApprover ===
+                    "Unassigned! Please Check Workflow Assignments";
+
+                  // Retrieve the next approver groups as an array of group names
+                  const nextApproverGroups =
+                    (workflowState.rootItem &&
+                      workflowState.items[workflowState.rootItem]
+                        ?.nextApproverGroups) ||
+                    [];
+
                   return (
                     <div key={field.id} className="space-y-2">
                       <Label
@@ -463,7 +486,15 @@ const OrderRequestForm = () => {
                       >
                         {field.parameter}
                         {field.isRequired && (
-                          <span className="text-blue-500 ml-1">*</span>
+                          <span
+                            className={
+                              isUnassigned
+                                ? "text-red-500 ml-1"
+                                : "text-blue-500 ml-1"
+                            }
+                          >
+                            *
+                          </span>
                         )}
                         {errors[field.parameter] && (
                           <span className="text-red-500 text-xs ml-2">
@@ -471,33 +502,22 @@ const OrderRequestForm = () => {
                           </span>
                         )}
                       </Label>
-                      <Select
-                        value={defaultNextApprover}
-                        onValueChange={(value) => {
-                          handleInputChange(field.parameter, value);
-                          if (workflowState.rootItem) {
-                            dispatch({
-                              type: "updateItem",
-                              itemId: workflowState.rootItem,
-                              data: { nextApprover: value },
-                            });
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Next Step Approver" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {users.map((userObj) => (
-                            <SelectItem key={userObj.name} value={userObj.name}>
-                              {userObj.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="border p-2 rounded-md">
+                        {/* Display the next approver with conditional styling */}
+                        <span className={isUnassigned ? "text-red-500" : ""}>
+                          {nextApprover}
+                        </span>
+                        {/* If groups exist, display them */}
+                        {nextApproverGroups.length > 0 && (
+                          <span className="ml-2">
+                            {`+Groups( ${nextApproverGroups.join(", ")} )`}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 }
+
                 /* Document upload field update */
                 if (
                   field.type.toUpperCase() ===
@@ -873,9 +893,18 @@ const OrderRequestForm = () => {
           </fieldset>
         </div>
 
-        <Button type="submit" className="w-full">
-          Submit
-        </Button>
+        <div className="flex justify-center space-x-4">
+          <Button type="submit" variant={"outline"}>
+            Save Draft
+          </Button>
+          <Button
+            type="submit"
+            className="bg-blue-800 text-white"
+            variant={"outline"}
+          >
+            Submit
+          </Button>
+        </div>
       </form>
 
       {/* Document Removal Confirmation Dialog */}

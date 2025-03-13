@@ -26,7 +26,6 @@ const getWorkflowProgress = (row: any): string => {
   const currentStep = row.workflow?.currentStep || row["Request Status"];
 
   // Try to get the ordered steps from the row.
-  // This property should be saved with the row when the request is created.
   const steps: string[] =
     (row.workflow && row.workflow.orderedSteps) ||
     // fallback to a default mapping if needed

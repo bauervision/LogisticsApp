@@ -324,6 +324,7 @@ export function RequestTabs() {
               currentStep: nextItem.name,
             },
             "Next Step Approver": nextItem.nextApprover || "",
+            "Next Step Approver Groups": nextItem.nextApproverGroups || [],
             "Previous Approver": user.name,
             "Request Status": nextItem.name,
           };
@@ -363,6 +364,8 @@ export function RequestTabs() {
           currentStep: parentWorkflowItem.name,
         },
         "Next Step Approver": selectedRow["Previous Approver"],
+        "Next Step Approver Groups":
+          selectedRow["Previous Approver Groups"] || [],
         "Previous Approver": user.name,
         "Request Status": parentWorkflowItem.name,
       };

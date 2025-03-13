@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/dialog";
 
 import { useWorkflow } from "@/app/context/WorkflowContext";
-import workflow from "@/app/workflow-engine/workflow";
+
 import { useUser } from "@/app/context/UserContext";
+import { useUserGroup } from "@/app/context/UserGroupContext";
 import { AccessRole } from "@/app/constants"; // Import USERS here
 import RequestToast, { showToast } from "../Requests/RequestToast";
 import { useUserManagement } from "@/app/context/UserManagementContext";
@@ -33,6 +34,7 @@ const WorkflowComponent: React.FC = memo(() => {
   } = useWorkflow();
 
   const { user } = useUser();
+  const { groups } = useUserGroup();
   const { users, addUser } = useUserManagement();
   const [newItemName, setNewItemName] = useState<string>("");
   const [newWorkflowName, setNewWorkflowName] = useState<string>("");
@@ -390,10 +392,24 @@ const WorkflowComponent: React.FC = memo(() => {
             className="p-2 border border-gray-300 rounded-md"
           />
           <p className="text-lg">
-            {item.nextApprover ? (
+            {item.nextApprover ||
+            (item.nextApproverGroups && item.nextApproverGroups.length > 0) ? (
               <>
                 {" - Approver: "}
-                <span className="font-semibold">{item.nextApprover}</span>
+                {item.nextApprover && (
+                  <span className="font-semibold">{item.nextApprover}</span>
+                )}
+                {item.nextApproverGroups &&
+                  item.nextApproverGroups.length > 0 && (
+                    <span className="ml-2">
+                      {"+("}
+                      {item.nextApproverGroups.length}{" "}
+                      {item.nextApproverGroups.length === 1
+                        ? "Group Approver"
+                        : "Group Approvers"}
+                      {")"}
+                    </span>
+                  )}
               </>
             ) : (
               <>Needs Approver Assigned</>
@@ -487,6 +503,8 @@ const WorkflowComponent: React.FC = memo(() => {
                 className="w-full border border-gray-300 rounded-lg p-2"
               />
             </div>
+
+            {/* single next approver dropdown */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Next Approver
@@ -509,6 +527,40 @@ const WorkflowComponent: React.FC = memo(() => {
                 ))}
               </select>
             </div>
+
+            {/* New multi-select for user groups */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Next Approver Groups
+              </label>
+              <select
+                multiple
+                value={editData.nextApproverGroups || []}
+                onChange={
+                  user.role === AccessRole.USER
+                    ? undefined
+                    : (e) => {
+                        const options = e.target.options;
+                        const selected: string[] = [];
+                        for (let i = 0; i < options.length; i++) {
+                          if (options[i].selected) {
+                            selected.push(options[i].value);
+                          }
+                        }
+                        handleEditChange("nextApproverGroups", selected);
+                      }
+                }
+                disabled={user.role === AccessRole.USER}
+                className="w-full border border-gray-300 rounded-lg p-2 h-32"
+              >
+                {groups.map((group) => (
+                  <option key={group.name} value={group.name}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div>
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-gray-700">

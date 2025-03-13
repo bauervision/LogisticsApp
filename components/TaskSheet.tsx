@@ -15,13 +15,14 @@ import { useWorkflow } from "@/app/context/WorkflowContext";
 import RequestToast, { showToast } from "./Requests/RequestToast";
 import Link from "next/link";
 import { useRequestContext } from "@/app/context/DataContext";
+import { useUserGroup } from "@/app/context/UserGroupContext";
 
 const TaskSheet: React.FC = () => {
   const { rowData, setRowData } = useSchema();
   const { selectRow } = useRequestContext();
   const { user } = useUser();
   const { state: workflowState } = useWorkflow();
-
+  const { groups: availableGroups } = useUserGroup();
   const [tasks, setTasks] = useState<any[]>([]);
   const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -46,12 +47,24 @@ const TaskSheet: React.FC = () => {
   // Filter tasks assigned to the current user.
   useEffect(() => {
     if (rowData && user) {
-      const filteredTasks = rowData.filter(
-        (task: any) => task["Next Step Approver"] === user.name
-      );
+      const filteredTasks = rowData.filter((task: any) => {
+        // Check if the task's single next approver matches the logged in user.
+        const singleApproverMatch = task["Next Step Approver"] === user.name;
+
+        // Check if the task's next approver groups include a group that the user is a member of.
+        const groupApproverMatch =
+          Array.isArray(task["Next Step Approver Groups"]) &&
+          task["Next Step Approver Groups"].some((groupName: string) => {
+            const group = availableGroups.find((g) => g.name === groupName);
+            console.log(group);
+            return group && group.userNames.includes(user.name);
+          });
+
+        return singleApproverMatch || groupApproverMatch;
+      });
       setTasks(filteredTasks);
     }
-  }, [rowData, user]);
+  }, [rowData, user, availableGroups]);
 
   const handleTaskClick = (taskId: number) => {
     setExpandedTaskId((prev) => (prev === taskId ? null : taskId));
@@ -116,6 +129,7 @@ const TaskSheet: React.FC = () => {
               currentStep: nextItem.name,
             },
             "Next Step Approver": nextItem.nextApprover || "",
+            "Next Step Approver Groups": nextItem.nextApproverGroups || [],
             "Previous Approver": user.name,
             "Request Status": nextItem.name,
           };
@@ -164,6 +178,8 @@ const TaskSheet: React.FC = () => {
           currentStep: parentWorkflowItem.name,
         },
         "Next Step Approver": pendingTask["Previous Approver"],
+        "Next Step Approver Groups":
+          pendingTask["Previous Approver Groups"] || [],
         "Previous Approver": user.name,
         "Request Status": parentWorkflowItem.name,
       };

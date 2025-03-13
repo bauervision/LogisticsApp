@@ -8,6 +8,7 @@ import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 import { AccessRole, User } from "@/app/constants"; // adjust the import path as needed
 import { useUserManagement } from "@/app/context/UserManagementContext";
+import { useUserGroup, UserGroup } from "@/app/context/UserGroupContext";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -18,12 +19,6 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
-
-// Define a UserGroup interface.
-interface UserGroup {
-  name: string;
-  userNames: string[];
-}
 
 function AdminUserManagementPage() {
   // Local state for managing users
@@ -70,7 +65,9 @@ function AdminUserManagementPage() {
   const [selectedUsersForGroup, setSelectedUsersForGroup] = useState<string[]>(
     []
   );
-  const [groups, setGroups] = useState<UserGroup[]>([]);
+
+  // *** User Group Module State handled by context ***
+  const { groups, addGroup, updateGroup, deleteGroup } = useUserGroup();
 
   // For editing an existing group:
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -106,14 +103,13 @@ function AdminUserManagementPage() {
   // Handler to add a new user group.
   const handleAddGroup = () => {
     if (!newGroupName.trim()) {
-      // Optionally show an error message.
       return;
     }
     const newGroup: UserGroup = {
       name: newGroupName.trim(),
       userNames: selectedUsersForGroup,
     };
-    setGroups([...groups, newGroup]);
+    addGroup(newGroup);
     setNewGroupName("");
     setSelectedUsersForGroup([]);
   };
@@ -128,9 +124,7 @@ function AdminUserManagementPage() {
   // Handler for saving changes in the edit dialog.
   const handleSaveGroupEdit = () => {
     if (editingGroupIndex === null) return;
-    const updatedGroups = [...groups];
-    updatedGroups[editingGroupIndex] = editingGroupData;
-    setGroups(updatedGroups);
+    updateGroup(editingGroupIndex, editingGroupData);
     setIsEditDialogOpen(false);
     setEditingGroupIndex(null);
   };
@@ -144,8 +138,7 @@ function AdminUserManagementPage() {
   // Handler to delete a group.
   const handleDeleteGroup = () => {
     if (groupToDeleteIndex === null) return;
-    const updatedGroups = groups.filter((_, i) => i !== groupToDeleteIndex);
-    setGroups(updatedGroups);
+    deleteGroup(groupToDeleteIndex);
     setIsDeleteGroupDialogOpen(false);
     setGroupToDeleteIndex(null);
   };
