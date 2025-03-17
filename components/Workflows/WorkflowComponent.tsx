@@ -231,6 +231,7 @@ const WorkflowComponent: React.FC = memo(() => {
       return;
     }
     // Use the current workflow state to save under the new name.
+    dispatch({ type: "updateWorkflowName", name: newSaveAsName });
     saveWorkflow(newSaveAsName);
     setCurrentWorkflowName(newSaveAsName);
     showToast(`Workflow saved as "${newSaveAsName}"`, "success");
@@ -561,6 +562,7 @@ const WorkflowComponent: React.FC = memo(() => {
               </select>
             </div>
 
+            {/* Easy Approval */}
             <div>
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-gray-700">
@@ -967,12 +969,15 @@ const WorkflowComponent: React.FC = memo(() => {
             <div className="flex space-x-2">
               {user.role !== AccessRole.USER && (
                 <>
-                  <button
-                    onClick={handleSaveWorkflow}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
-                  >
-                    Save
-                  </button>
+                  {/* Hide Save button if Default Workflow is loaded */}
+                  {currentWorkflowName != "Default Workflow" && (
+                    <button
+                      onClick={handleSaveWorkflow}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                    >
+                      Save
+                    </button>
+                  )}
                   {/* **** NEW: Save As Button **** */}
                   <button
                     onClick={handleOpenSaveAsDialog}
@@ -980,12 +985,16 @@ const WorkflowComponent: React.FC = memo(() => {
                   >
                     Save As
                   </button>
-                  <button
-                    onClick={handleOpenDeleteDialog}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-                  >
-                    Delete
-                  </button>
+
+                  {/* Hide Delete Button if Default Workflow is loaded */}
+                  {currentWorkflowName != "Default Workflow" && (
+                    <button
+                      onClick={handleOpenDeleteDialog}
+                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                    >
+                      Delete
+                    </button>
+                  )}
                 </>
               )}
               <button

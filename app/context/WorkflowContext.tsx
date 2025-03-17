@@ -87,6 +87,11 @@ interface UpdateWorkflowMetadataAction {
   description?: string;
 }
 
+interface UpdateWorkflowNameAction {
+  type: "updateWorkflowName";
+  name: string;
+}
+
 type WorkflowAction =
   | InitializeAction
   | TransitionAction
@@ -96,7 +101,8 @@ type WorkflowAction =
   | UpdateName
   | LoadWorkflowAction
   | UpdateItemAction
-  | UpdateWorkflowMetadataAction;
+  | UpdateWorkflowMetadataAction
+  | UpdateWorkflowNameAction;
 
 interface WorkflowContextType {
   state: WorkflowState;
@@ -119,7 +125,13 @@ const WorkflowContext = createContext<WorkflowContextType | undefined>(
 );
 
 // Use the default template as the initial state
-const initialState: WorkflowState = DEFAULT_WORKFLOW;
+const initialState: WorkflowState = {
+  name: "",
+  items: {},
+  rootItem: undefined,
+  workflowKey: "",
+  workflowDescription: "",
+};
 
 const workflowReducer = (
   state: WorkflowState = initialState,
@@ -273,6 +285,10 @@ const workflowReducer = (
       };
     }
 
+    case "updateWorkflowName": {
+      return { ...state, name: action.name };
+    }
+
     default:
       return state;
   }
@@ -292,6 +308,7 @@ export const WorkflowProvider = ({ children }: { children: ReactNode }) => {
   const saveWorkflow = (name: string) => {
     const workflowToSave = {
       ...state,
+      name, // override state.name with the new name
       workflowKey: state.workflowKey,
       workflowDescription: state.workflowDescription,
     };
@@ -305,7 +322,9 @@ export const WorkflowProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const loadWorkflow = (workflowName: string) => {
-    const savedWorkflow = localStorage.getItem(`workflow_${workflowName}`);
+    const key = `workflow_${workflowName}`;
+    const savedWorkflow = localStorage.getItem(key);
+    console.log(`Loading workflow from key: ${key}`, savedWorkflow);
     if (savedWorkflow) {
       const workflowState = JSON.parse(savedWorkflow);
       dispatch({
@@ -318,8 +337,10 @@ export const WorkflowProvider = ({ children }: { children: ReactNode }) => {
           workflowDescription: workflowState.workflowDescription || "",
         },
       });
-      setLoading(false);
+    } else {
+      console.log("ERROR, missing workflow state!");
     }
+    setLoading(false);
   };
 
   const deleteWorkflow = (workflowName: string) => {
@@ -334,15 +355,7 @@ export const WorkflowProvider = ({ children }: { children: ReactNode }) => {
     return keys.map((key) => key.replace("workflow_", ""));
   };
 
-  // When the provider mounts, ensure the default workflow is saved, and the current workflow name is set
-  useEffect(() => {
-    const defaultWorkflowName = "Default Template";
-    setCurrentWorkflowName("Default Template");
-    if (!localStorage.getItem(`workflow_${defaultWorkflowName}`)) {
-      saveWorkflow(defaultWorkflowName);
-    }
-  }, []);
-
+  // be sure to grab and load up all saved workflows from mount
   useEffect(() => {
     setSavedWorkflows(getSavedWorkflows());
   }, []);

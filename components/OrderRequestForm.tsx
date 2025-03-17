@@ -66,7 +66,7 @@ const OrderRequestForm = () => {
   const { users, addUser } = useUserManagement();
   const { schema, rowData } = useSchema();
   const {
-    state,
+    state: workflowState,
     dispatch,
     savedWorkflows,
     currentWorkflowName,
@@ -75,7 +75,6 @@ const OrderRequestForm = () => {
   } = useWorkflow();
   const { addRow, data } = useRequestContext();
   const { user } = useUser();
-  const { state: workflowState } = useWorkflow();
 
   const [formValues, setFormValues] = useState<{ [key: string]: any }>({});
   const [formSubmitted, setFormSubmitted] = useState(false);
@@ -112,19 +111,14 @@ const OrderRequestForm = () => {
     setCurrentWorkflowName(workflowName);
     loadWorkflow(workflowName);
 
-    if (state.rootItem) {
-      const steps = extractWorkflowSteps(state.rootItem);
-      setWorkflowSteps(steps);
-    } else {
-      setWorkflowSteps([]);
-    }
+    console.log("Setting workflow name to ", workflowName);
   };
 
   const extractWorkflowSteps = (
     itemId: string,
     steps: string[] = []
   ): string[] => {
-    const item = state.items[itemId];
+    const item = workflowState.items[itemId];
     if (!item) return steps;
     steps.push(item.name);
     item.children.forEach((childId) => extractWorkflowSteps(childId, steps));
@@ -267,31 +261,13 @@ const OrderRequestForm = () => {
     setFormValues((prev) => ({ ...prev, Documents: value }));
   };
 
-  // ----------------------------
-  // useEffect for default values
-  // ----------------------------
-  useEffect(() => {
-    if (savedWorkflows && savedWorkflows.length === 1) {
-      const defaultWorkflow = savedWorkflows[0];
-      if (currentWorkflowName !== defaultWorkflow) {
-        setCurrentWorkflowName(defaultWorkflow);
-        loadWorkflow(defaultWorkflow);
-        setFormValues((prev) => ({
-          ...prev,
-          "Request Workflow": defaultWorkflow,
-        }));
-      }
-    }
-  }, [savedWorkflows]);
-
   useEffect(() => {
     if (workflowState.rootItem) {
+      console.log("Running useEffect workflowState.rootItem present...");
       const firstStep = workflowState.items[workflowState.rootItem];
       const currentStatus = firstStep?.name || "Draft";
       const nextApprover = firstStep?.nextApprover || "";
-      if (!workflowState.name?.trim()) {
-        setCurrentWorkflowName(workflowState.name);
-      }
+
       setFormValues((prev) => ({
         ...prev,
         "Request Creator": user.name,
@@ -302,6 +278,11 @@ const OrderRequestForm = () => {
         "Previous Approver": user.name,
         "Request Created": getFormattedTodayDate("MM-DD-YYYY"),
       }));
+
+      const steps = extractWorkflowSteps(workflowState.rootItem);
+      setWorkflowSteps(steps);
+
+      console.log("workflowState", workflowState);
     }
   }, [workflowState]);
 
@@ -326,6 +307,11 @@ const OrderRequestForm = () => {
     if (!formValues["Request Workflow"]) {
       newErrors["Request Workflow"] = true;
     }
+
+    console.log(
+      "VALIDATION FORM: formValues[Request Workflow]",
+      formValues["Request Workflow"]
+    );
 
     [...(schema || [])].forEach((field) => {
       if (field.isRequired && field.parameter !== "Request Status") {
@@ -360,8 +346,11 @@ const OrderRequestForm = () => {
     let firstStep = "";
     if (workflowSteps.length > 0) {
       firstStep = workflowSteps[0];
-    } else if (state.rootItem && state.items[state.rootItem]) {
-      firstStep = state.items[state.rootItem].name;
+    } else if (
+      workflowState.rootItem &&
+      workflowState.items[workflowState.rootItem]
+    ) {
+      firstStep = workflowState.items[workflowState.rootItem].name;
     }
     // Prepare the new row.
     const newRow: any = {
@@ -392,6 +381,7 @@ const OrderRequestForm = () => {
     setFormSubmitted(true);
     setTimeout(() => setFormSubmitted(false), 3000);
     showToast("New Request Submitted successfully", "success");
+    console.log(newRow);
   };
 
   // ----------------------------

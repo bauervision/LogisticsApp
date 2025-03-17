@@ -1,18 +1,23 @@
 import React, { useEffect, useState } from "react";
 import { useWorkflow } from "@/app/context/WorkflowContext";
+import { DEFAULT_WORKFLOW } from "@/app/constants";
 
 const SavedWorkflowsDropdown: React.FC = () => {
-  const { savedWorkflows, loadWorkflow, setCurrentWorkflowName } =
+  const { savedWorkflows, dispatch, loadWorkflow, setCurrentWorkflowName } =
     useWorkflow();
   const [selectedWorkflow, setSelectedWorkflow] = useState<string>(""); // Track the selected workflow
 
   const handleLoadWorkflow = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const workflowName = e.target.value;
-    setSelectedWorkflow(workflowName); // Update selected workflow
+    setSelectedWorkflow(workflowName);
 
-    if (workflowName) {
+    if (workflowName === "default") {
+      // Load the default template explicitly.
+      dispatch({ type: "loadWorkflow", workflowState: DEFAULT_WORKFLOW });
+      setCurrentWorkflowName("Default Workflow");
+    } else if (workflowName) {
       loadWorkflow(workflowName);
-      setCurrentWorkflowName(workflowName); // Update current workflow name
+      setCurrentWorkflowName(workflowName);
     }
   };
 
@@ -25,28 +30,19 @@ const SavedWorkflowsDropdown: React.FC = () => {
 
   return (
     <div className=" ">
-      {savedWorkflows.length > 0 ? (
-        <>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Load Workflow
-          </label>
-          <select
-            value={selectedWorkflow}
-            disabled={savedWorkflows.length === 0}
-            onChange={handleLoadWorkflow}
-            className="block w-full p-2 border border-gray-300 rounded-md"
-          >
-            <option value="">Select a workflow</option>
-            {savedWorkflows.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </>
-      ) : (
-        <div className="">No Workflows Found, please create one first</div>
-      )}
+      <select
+        value={selectedWorkflow}
+        onChange={handleLoadWorkflow}
+        className="block w-full p-2 border border-gray-300 rounded-md"
+      >
+        <option value="">Select a workflow</option>
+        <option value="default">Default Workflow</option>
+        {savedWorkflows.map((name) => (
+          <option key={name} value={name}>
+            {name}
+          </option>
+        ))}
+      </select>
     </div>
   );
 };

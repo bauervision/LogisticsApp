@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useCallback } from "react";
+import React, { useMemo, useRef, useCallback, useEffect } from "react";
 import { AgGridReact } from "ag-grid-react";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
@@ -103,6 +103,10 @@ const GridTable = () => {
       return def;
     });
   }, [colDefs]);
+
+  useEffect(() => {
+    console.log(rowData);
+  }, []);
 
   return (
     <div
