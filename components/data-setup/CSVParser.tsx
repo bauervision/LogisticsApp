@@ -72,6 +72,7 @@ export const CSVParser: React.FC<CSVParserProps> = ({
         isRequired: false,
         defaultField: false,
         readOnly: false,
+        isHidden: false,
       }));
 
       parsedData.pop(); // Remove any extra data

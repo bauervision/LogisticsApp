@@ -1,7 +1,6 @@
 import { RequestItem } from "./context/SchemaContext";
 import { WorkflowItemState, WorkflowState } from "./context/WorkflowContext";
 
-// constants.ts
 export const FIELD_TYPES = {
   TEXT: "text",
   NUMBER: "number",

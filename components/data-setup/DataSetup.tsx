@@ -23,6 +23,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import RequestToast, { showToast } from "../Requests/RequestToast";
+import GridTable from "../ag-grid-table/GridTable";
 
 const DataSetup: React.FC = () => {
   const {
@@ -43,6 +44,92 @@ const DataSetup: React.FC = () => {
     ...PRESET_FIELDS,
     ...SHIPPING_FIELDS,
   ]);
+
+  // Helper function to generate column definitions from a schema array
+  const generateColDefs = (schemaArray: SchemaItem[]): ColDef[] => {
+    return schemaArray
+      .filter((field) => !field.isHidden)
+      .map((field): ColDef => {
+        const baseColDef = {
+          headerName: field.parameter,
+          field: field.parameter,
+        };
+
+        switch (field.type) {
+          case FIELD_TYPES.NUMBER:
+            return {
+              ...baseColDef,
+              // Compare as numbers
+              comparator: (valueA: any, valueB: any) =>
+                Number(valueA) - Number(valueB),
+              // Parse new values as numbers
+              valueParser: (params: any) => Number(params.newValue),
+            };
+          case FIELD_TYPES.CURRENCY:
+            console.log("Generating currency colDef for:", field.parameter);
+            return {
+              ...baseColDef,
+              comparator: (valueA: any, valueB: any) =>
+                Number(valueA) - Number(valueB),
+              valueParser: (params: any) => {
+                console.log("Currency valueParser:", params);
+                return Number(params.newValue);
+              },
+              valueFormatter: (params: any) => {
+                console.log("Currency formatter called with:", params.value);
+                const numericValue = Number(params.value);
+                if (!isNaN(numericValue)) {
+                  return new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                  }).format(numericValue);
+                }
+                return params.value;
+              },
+            };
+
+          case FIELD_TYPES.DATE:
+            return {
+              ...baseColDef,
+              // Compare dates by converting to timestamps
+              comparator: (valueA: any, valueB: any) =>
+                new Date(valueA).getTime() - new Date(valueB).getTime(),
+              // Parse new values as ISO date strings (adjust parsing if you have a custom format)
+              valueParser: (params: any) => {
+                const parsedDate = new Date(params.newValue);
+                return isNaN(parsedDate.getTime())
+                  ? params.oldValue
+                  : parsedDate.toISOString();
+              },
+            };
+          // For text and documents, default sorting works fine.
+          case FIELD_TYPES.TEXT:
+          case FIELD_TYPES.DOCUMENTS:
+          default:
+            return baseColDef;
+        }
+      });
+  };
+
+  // Update handler for CSV schema.
+  const handleUpdateCSVField = (
+    id: string,
+    key: keyof SchemaItem,
+    value: string | boolean | string[]
+  ) => {
+    if (schema) {
+      const updatedSchema = schema.map((field) =>
+        field.id.toString() === id ? { ...field, [key]: value } : field
+      );
+      setSchema(updatedSchema);
+
+      // Recalculate column definitions based on the updated schema.
+      const newColDefs = generateColDefs(updatedSchema);
+
+      console.log("Updating CSV field...");
+      setColDefs(newColDefs);
+    }
+  };
 
   // When saving in manual mode, simply use the manual schema.
   const handleSaveManualSchema = () => {
@@ -100,6 +187,13 @@ const DataSetup: React.FC = () => {
   // When switching modes, we preserve manual schema so built‑in fields remain.
   const handleModeChange = (newMode: "csv" | "manual") => {
     setMode(newMode);
+
+    if (newMode === "csv") {
+      // Clear out CSV mode data
+      setSchema([]);
+      setColDefs([]);
+      setRowData([]);
+    }
   };
 
   useEffect(() => {
@@ -366,18 +460,118 @@ const DataSetup: React.FC = () => {
               <CSVParser
                 saveParsedData={(rows, data) => setRowData(data)}
                 setHeaders={(rows, schemaArray) => {
-                  // When CSV is used, merge CSV-based schema with preset fields.
-                  const completeSchema = [
-                    ...PRESET_FIELDS,
-                    ...SHIPPING_FIELDS,
-                    ...schemaArray,
-                  ];
-                  setSchema(completeSchema);
+                  // In CSV mode, we use only the CSV-generated schema.
+                  setSchema(schemaArray);
+                  const newColDefs = generateColDefs(schemaArray);
+                  setColDefs(newColDefs);
                 }}
                 handleDataCreation={setRowData}
                 setSchema={setSchema}
               />
             </section>
+            {/* CSV Schema Preview */}
+            {schema && schema.length > 0 && (
+              <>
+                <section className="bg-white p-6 shadow rounded-lg mt-6">
+                  <h3 className="text-lg font-semibold mb-4">
+                    CSV Schema Preview
+                  </h3>
+                  <fieldset className="mb-4 border p-4">
+                    <legend className="px-2 font-semibold">
+                      CSV Generated Schema
+                    </legend>
+                    {schema.map((field) => (
+                      <div
+                        key={field.id}
+                        className="flex items-center gap-4 w-full mb-2"
+                      >
+                        <Input
+                          className="flex-grow"
+                          placeholder="Field Name"
+                          value={field.parameter}
+                          onChange={(e) =>
+                            handleUpdateCSVField(
+                              field.id.toString(),
+                              "parameter",
+                              e.target.value
+                            )
+                          }
+                        />
+                        <Select
+                          onValueChange={(value) =>
+                            handleUpdateCSVField(
+                              field.id.toString(),
+                              "type",
+                              value
+                            )
+                          }
+                          value={field.type}
+                        >
+                          <SelectTrigger className="w-1/4">
+                            <SelectValue placeholder="Select Type">
+                              {FIELD_TYPES_OPTIONS.find(
+                                (option) => option.value === field.type
+                              )?.label || "Select Type"}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FIELD_TYPES_OPTIONS.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {field.type === FIELD_TYPES.DATE && (
+                          <select
+                            className="form-select"
+                            value={field.format || ""}
+                            onChange={(e) =>
+                              handleUpdateCSVField(
+                                field.id.toString(),
+                                "format",
+                                e.target.value
+                              )
+                            }
+                          >
+                            <option value="" disabled>
+                              Select Date Format
+                            </option>
+                            {DATE_FORMAT_OPTIONS.map((format) => (
+                              <option key={format} value={format}>
+                                {format}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        <div className="flex items-center">
+                          <label className="mr-2 text-sm">Hidden</label>
+                          <input
+                            type="checkbox"
+                            checked={field.isHidden || false}
+                            onChange={(e) =>
+                              handleUpdateCSVField(
+                                field.id.toString(),
+                                "isHidden",
+                                e.target.checked
+                              )
+                            }
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </fieldset>
+                </section>
+
+                {/* AGGrid Table Preview */}
+                <section className="mt-6">
+                  <GridTable />
+                </section>
+              </>
+            )}
           </>
         )}
       </main>
