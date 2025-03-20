@@ -6,21 +6,44 @@ import React, {
   useContext,
   ReactNode,
   useEffect,
+  useMemo,
 } from "react";
-import { USERS, User } from "../constants";
+import { User } from "../constants";
 
-interface UserContextType {
-  user: User;
-  setUser: React.Dispatch<React.SetStateAction<User>>;
-}
+type UserContextType = {
+  user: User | null;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  setCurrentTenant: (tenant: string) => void;
+};
 
-const UserContext = createContext<UserContextType | undefined>(undefined);
+export const UserContext = createContext<UserContextType>({
+  user: null,
+  setUser: () => {},
+  setCurrentTenant: () => {},
+});
 
 const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User>(USERS[0]); // default to first user
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = sessionStorage.getItem("user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("user", JSON.stringify(user)), [user];
+    console.log("USer Context", user);
+  });
+  const userMemod = useMemo(() => ({ user, setUser }), [user, setUser]);
+
+  const setCurrentTenant = (tenant: string) => {
+    // Remove the prefix "TENANT_" before storing
+    const strippedTenant = tenant.replace(/^TENANT_/, "");
+    setUser((prevUser) =>
+      prevUser ? { ...prevUser, CurrentTenant: strippedTenant } : prevUser
+    );
+  };
 
   return (
-    <UserContext.Provider value={{ user, setUser }}>
+    <UserContext.Provider value={{ user, setUser, setCurrentTenant }}>
       {children}
     </UserContext.Provider>
   );

@@ -1,94 +1,35 @@
 "use client";
 
-import Link from "next/link";
-import "./Navbar.css";
-import RoleDropdown from "../RoleDropdown"; // Ensure this path is correct
 import { useUser } from "@/app/context/UserContext";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/compat/router"; // Import useRouter
-
-// dynamic style: inactive route
-const inactiveHeaderStyle = {
-  color: "#000000",
-};
+import { Button } from "@/components/ui/button";
+import TenantDropdown from "../TenantDropdown";
+import { useRouter } from "next/compat/router";
+import { LogOut } from "lucide-react"; // Import a logout icon
 
 function Navbar() {
-  const { user } = useUser();
-  const [isLoading, setIsLoading] = useState(false);
+  const { user, setUser } = useUser();
   const router = useRouter();
 
-  useEffect(() => {
-    const handleRouteChange = () => {
-      setIsLoading(true);
-    };
+  const handleLogout = () => {
+    setUser(null); // Clear the user on logout
+    router?.push("/"); // Redirect to the public landing page
+  };
 
-    const handleRouteComplete = () => {
-      setIsLoading(false);
-    };
-
-    router?.events.on("routeChangeStart", handleRouteChange);
-    router?.events.on("routeChangeComplete", handleRouteComplete);
-    router?.events.on("routeChangeError", handleRouteComplete);
-
-    return () => {
-      router?.events.off("routeChangeStart", handleRouteChange);
-      router?.events.off("routeChangeComplete", handleRouteComplete);
-      router?.events.off("routeChangeError", handleRouteComplete);
-    };
-  }, [router?.events]);
+  if (!user) return null;
 
   return (
-    <div className="Header border-b" data-testid="Header">
-      <div className="flex justify-between items-center w-full">
-        <div className="flex space-x-4">
-          <div className="headerSection">
-            <Link href="/">Leidos</Link>
-          </div>
-
-          {/* request tracker */}
-          <div className="headerItem" data-testid={`Header name`}>
-            <Link
-              className="navLink"
-              style={inactiveHeaderStyle}
-              data-testid="NavLink"
-              href="/request-tracker"
-            >
-              Request Tracker
-            </Link>
-          </div>
-
-          {/* eCatalog */}
-          <div className="headerItem" data-testid={`Header name`}>
-            <Link
-              className="navLink"
-              style={inactiveHeaderStyle}
-              data-testid="NavLink"
-              href="#"
-            >
-              eCatalog
-            </Link>
-          </div>
-
-          {/* Program management */}
-          <div className="headerItem" data-testid={`Header name`}>
-            <Link
-              className="navLink"
-              style={inactiveHeaderStyle}
-              data-testid="NavLink"
-              href="#"
-            >
-              Program Management
-            </Link>
-          </div>
-        </div>
-        {/* Role Display and Dropdown */}{" "}
-        <div
-          className="flex items-center space-x-4 headerItem"
-          data-testid={`Header role-switch`}
-        >
-          {isLoading ? <div>Loading...</div> : <RoleDropdown />}
-        </div>
-      </div>
+    <div className="absolute top-4 right-4 flex items-center space-x-4 z-50 text-white">
+      {user.Tenants.length > 0 && <TenantDropdown />}
+      <span className="text-sm font-medium">{user.Name}</span>
+      <Button
+        variant="ghost"
+        onClick={handleLogout}
+        className="p-2"
+        title="Logout" // additional tooltip support
+      >
+        <LogOut className="h-5 w-5" />
+        <span className="sr-only">Logout</span>
+      </Button>
     </div>
   );
 }

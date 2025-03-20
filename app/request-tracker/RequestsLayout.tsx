@@ -30,13 +30,16 @@ const RequestsLayout: React.FC<NewLayoutProps> = ({
     setIsMounted(true);
   }, []);
 
-  const userAccess =
-    user.role == AccessRole.SUPER_ADMIN || user.role == AccessRole.ADMIN
-      ? "You can VIEW, ADD, CHANGE, or DELETE Records here."
-      : " You can only VIEW records here.";
+  // const userAccess =
+  //   user.role == AccessRole.SUPER_ADMIN || user.role == AccessRole.ADMIN
+  //     ? "You can VIEW, ADD, CHANGE, or DELETE Records here."
+  //     : " You can only VIEW records here.";
 
   return (
-    <div className="bg-slate-300 w-full min-h-screen flex flex-col">
+    <div
+      className=" w-full min-h-screen flex flex-col "
+      style={{ backgroundColor: "rgba(84, 72, 213, 1)" }}
+    >
       <FrequentLinks />
       <div className="mx-auto w-11/12 py-4">
         {!isMounted && (
@@ -51,7 +54,7 @@ const RequestsLayout: React.FC<NewLayoutProps> = ({
               <div>
                 <CardTitle className="text-2xl">{title}</CardTitle>
 
-                <CardDescription>{userAccess}</CardDescription>
+                {/* <CardDescription>{userAccess}</CardDescription> */}
               </div>
               {pageComponents && pageComponents.length > 0 && (
                 <div className="flex flex-row space-x-6 justify-between items-center">

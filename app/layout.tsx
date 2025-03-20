@@ -44,15 +44,8 @@ export default function RootLayout({
           <UserManagementProvider>
             <UserProvider>
               <UserGroupProvider>
-                <ProtectedRoute
-                  requiredRoles={[
-                    AccessRole.SUPER_ADMIN,
-                    AccessRole.ADMIN,
-                    AccessRole.USER,
-                  ]}
-                >
+                <ProtectedRoute>
                   <Navbar />
-
                   <div>
                     <ToastContextProvider>
                       <SidebarProvider>

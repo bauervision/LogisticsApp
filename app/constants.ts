@@ -229,19 +229,14 @@ export enum AccessRole {
 
 // interface for the Role type.
 export interface User {
-  name: string;
-  role: AccessRole;
+  Name: string;
+  Roles: Array<string>;
+  AcceptedTerms: boolean;
+  LoggingOut: boolean;
+  Tenants: Array<string>;
+  IsAdmin: boolean;
+  CurrentTenant: string;
 }
-
-// USERS is now correctly typed as an array of User.
-export const USERS: User[] = [
-  { name: "Jane Super", role: AccessRole.SUPER_ADMIN },
-  { name: "Kara Admin", role: AccessRole.ADMIN },
-  { name: "Dan User", role: AccessRole.USER },
-  { name: "Matt User", role: AccessRole.USER },
-  { name: "Terry User", role: AccessRole.USER },
-  { name: "John Guest", role: AccessRole.GUEST },
-];
 
 export const DEFAULT_WORKFLOW: WorkflowState = {
   rootItem: "order-received",
@@ -358,4 +353,87 @@ export const US_STATES = [
   "West Virginia",
   "Wisconsin",
   "Wyoming",
+];
+
+// ------------ USERS ------------------//
+const all_roles = [
+  "CHS_DOCS_ADD",
+  "CHS_DOCS_ADD_FOLDER",
+  "CHS_DOCS_DELETE",
+  "CHS_DOCS_LIST",
+  "CHS_DOCS_READ",
+  "CHS_DOCS_UPDATE",
+  "CHS_ECAT_ACCESS",
+  "CHS_ECAT_ADMIN",
+  "CHS_ECAT_ORDERING",
+  "CHS_ECAT_ORDER_ADMIN",
+  "CHS_IDE_ACCESS",
+  "CHS_LEIDOS_PROG_MGMT",
+  "CHS_PORTAL_ACCESS",
+  "CHS_PORTAL_DASHBOARDS_ACCESS",
+  "CHS_PORTAL_DOCS_ACCESS",
+  "CHS_PORTAL_REQUEST_TRACKER_ACCESS",
+  "SERVICE_NOW",
+  "TENANT_CHS",
+];
+
+const superAdminRoles: string[] = all_roles;
+const adminRoles: string[] = ["CHS_PORTAL_ACCESS"];
+
+// USERS is now correctly typed as an array of User.
+export const USERS: User[] = [
+  {
+    Name: "Jane Super",
+    Roles: superAdminRoles,
+    AcceptedTerms: true,
+    LoggingOut: false,
+    Tenants: ["TENANT_CHS", "TENANT_F16", "TENANT_DEMO", "TENANT_PACMAN"],
+    IsAdmin: false,
+    CurrentTenant: "",
+  },
+  {
+    Name: "Kara Admin",
+    Roles: adminRoles,
+    AcceptedTerms: true,
+    LoggingOut: false,
+    Tenants: ["TENANT_CHS", "TENANT_F16"],
+    IsAdmin: false,
+    CurrentTenant: "",
+  },
+  {
+    Name: "Dan User",
+    Roles: ["CHS_PORTAL_ACCESS"],
+    AcceptedTerms: true,
+    LoggingOut: false,
+    Tenants: ["TENANT_CHS"],
+    IsAdmin: false,
+    CurrentTenant: "",
+  },
+  {
+    Name: "Matt User",
+    Roles: ["CHS_PORTAL_ACCESS"],
+    AcceptedTerms: true,
+    LoggingOut: false,
+    Tenants: ["TENANT_CHS"],
+    IsAdmin: false,
+    CurrentTenant: "",
+  },
+  {
+    Name: "Terry User",
+    Roles: ["CHS_PORTAL_ACCESS"],
+    AcceptedTerms: true,
+    LoggingOut: false,
+    Tenants: ["TENANT_F16"],
+    IsAdmin: false,
+    CurrentTenant: "",
+  },
+  {
+    Name: "John Guest",
+    Roles: [],
+    AcceptedTerms: false,
+    LoggingOut: false,
+    Tenants: [],
+    IsAdmin: false,
+    CurrentTenant: "",
+  },
 ];

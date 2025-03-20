@@ -3,12 +3,17 @@
 import Image from "next/image";
 import Background from "/assets/branding/visionary.png";
 import { clearLinkClicks, getFrequentLinks } from "./utils/trackLinkClicks";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useUser } from "./context/UserContext";
 import { useSchema } from "./context/SchemaContext";
+import FrequentLinks from "@/components/Requests/FrequentLinks";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import RequestsLayout from "./request-tracker/RequestsLayout";
+import TaskSheet from "@/components/TaskSheet";
 
 export default function Home() {
-  const { setUser } = useUser();
+  const { user, setUser } = useUser();
+
   const { clearLocalData } = useSchema();
   const [links, setLinks] = useState<string[]>([]);
 
@@ -20,8 +25,12 @@ export default function Home() {
   // }, []);
 
   return (
-    <div>
-      <Image src={Background} alt="background" sizes="100vw" />
-    </div>
+    <RequestsLayout title="Catēna Home Page" pageComponents={[<TaskSheet />]}>
+      <div className="flex h-screen items-start justify-center">
+        <div className="text-center text-lg font-semibold">
+          Welcome to Catēna!
+        </div>
+      </div>
+    </RequestsLayout>
   );
 }
