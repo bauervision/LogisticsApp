@@ -12,7 +12,6 @@ import LoginDialog from "@/components/LoginDialog";
 const PublicLanding: React.FC = () => {
   return (
     <>
-      {/* <PublicHeader /> */}
       <main className="container mx-auto  bg-violet-900">
         <h1 className="text-5xl font-bold text-center p-4 text-white">
           Welcome to Catēna

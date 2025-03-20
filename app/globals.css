@@ -111,3 +111,14 @@
 .completed-row {
   background-color: #d4edda !important; /* A light green background */
 }
+
+.sectionGradient {
+  background: rgb(235, 235, 235);
+  background: linear-gradient(
+    0deg,
+    rgba(235, 235, 235, 1) 0%,
+    rgba(110, 56, 157, 1) 25%,
+    rgba(110, 56, 157, 1) 75%,
+    rgba(235, 235, 235, 1) 100%
+  );
+}
