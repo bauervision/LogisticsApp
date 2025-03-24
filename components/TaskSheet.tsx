@@ -49,7 +49,7 @@ const TaskSheet: React.FC = () => {
     if (rowData && user) {
       const filteredTasks = rowData.filter((task: any) => {
         // Check if the task's single next approver matches the logged in user.
-        const singleApproverMatch = task["Next Step Approver"] === user.name;
+        const singleApproverMatch = task["Next Step Approver"] === user.Name;
 
         // Check if the task's next approver groups include a group that the user is a member of.
         const groupApproverMatch =
@@ -57,7 +57,7 @@ const TaskSheet: React.FC = () => {
           task["Next Step Approver Groups"].some((groupName: string) => {
             const group = availableGroups.find((g) => g.name === groupName);
             console.log(group);
-            return group && group.userNames.includes(user.name);
+            return group && group.userNames.includes(user.Name);
           });
 
         return singleApproverMatch || groupApproverMatch;
@@ -94,7 +94,7 @@ const TaskSheet: React.FC = () => {
     const timestamp = new Date().toLocaleString(); // Formats date and time.
 
     // Build the comment string with the step, the quoted comment, the user's name, and the timestamp.
-    const commentWithUser = `[${step}] "${comment}" - ${user.name} ${timestamp}`;
+    const commentWithUser = `[${step}] "${comment}" - ${user?.Name} ${timestamp}`;
 
     let updatedTask = { ...pendingTask };
 
@@ -130,7 +130,7 @@ const TaskSheet: React.FC = () => {
             },
             "Next Step Approver": nextItem.nextApprover || "",
             "Next Step Approver Groups": nextItem.nextApproverGroups || [],
-            "Previous Approver": user.name,
+            "Previous Approver": user?.Name,
             "Request Status": nextItem.name,
           };
           showToast(
@@ -180,7 +180,7 @@ const TaskSheet: React.FC = () => {
         "Next Step Approver": pendingTask["Previous Approver"],
         "Next Step Approver Groups":
           pendingTask["Previous Approver Groups"] || [],
-        "Previous Approver": user.name,
+        "Previous Approver": user?.Name,
         "Request Status": parentWorkflowItem.name,
       };
       showToast(

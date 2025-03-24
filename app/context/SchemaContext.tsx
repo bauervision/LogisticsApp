@@ -9,6 +9,15 @@ import React, {
 } from "react";
 import { useWorkflow } from "@/app/context/WorkflowContext";
 import { FIELD_TYPES } from "../constants";
+import {
+  clearSavedLocalData,
+  getColDefsData,
+  getRowData,
+  getSchemaData,
+  saveColDefsData,
+  saveRowData,
+  saveSchemaData,
+} from "@/hooks/dataManager";
 
 export interface DocumentData {
   name: string;
@@ -56,10 +65,6 @@ export interface SchemaContextType {
   getRequestStatus: (workflowName: string) => number | null;
 }
 
-const SCHEMA_STORAGE_KEY = "schema_data";
-const ROW_DATA_STORAGE_KEY = "row_data";
-const COL_DEFS_STORAGE_KEY = "col_defs";
-
 const SchemaContext = createContext<SchemaContextType | undefined>(undefined);
 
 export const SchemaProvider: React.FC<{ children: ReactNode }> = ({
@@ -71,28 +76,51 @@ export const SchemaProvider: React.FC<{ children: ReactNode }> = ({
 
   const { state: workflowState, currentWorkflowName } = useWorkflow();
 
-  // Load saved data from localStorage on mount
   useEffect(() => {
-    const savedSchema = localStorage.getItem(SCHEMA_STORAGE_KEY);
-    const savedRowData = localStorage.getItem(ROW_DATA_STORAGE_KEY);
-    const savedColDefs = localStorage.getItem(COL_DEFS_STORAGE_KEY);
+    // Using async functions to load data
+    (async () => {
+      const storedSchema = await getSchemaData();
+      // console.log(storedSchema);
+      if (storedSchema) {
+        setSchemaState(storedSchema);
+        updateColDefs(storedSchema);
+      }
 
-    if (savedSchema) {
-      const parsedSchema = JSON.parse(savedSchema);
-      setSchemaState(parsedSchema);
-      updateColDefs(parsedSchema);
-    }
+      const storedRowData = await getRowData();
+      if (storedRowData) {
+        setRowDataState(storedRowData);
+        // console.log(storedRowData);
+      }
 
-    if (savedRowData) {
-      setRowDataState(JSON.parse(savedRowData));
-
-      console.log(JSON.parse(savedRowData));
-    }
-
-    if (savedColDefs) {
-      setColDefsState(JSON.parse(savedColDefs));
-    }
+      const storedColDefs = await getColDefsData();
+      if (storedColDefs) {
+        setColDefsState(storedColDefs);
+      }
+    })();
   }, []);
+
+  // Load saved data from localStorage on mount
+  // useEffect(() => {
+  //   const savedSchema = localStorage.getItem(SCHEMA_STORAGE_KEY);
+  //   const savedRowData = localStorage.getItem(ROW_DATA_STORAGE_KEY);
+  //   const savedColDefs = localStorage.getItem(COL_DEFS_STORAGE_KEY);
+
+  //   if (savedSchema) {
+  //     const parsedSchema = JSON.parse(savedSchema);
+  //     setSchemaState(parsedSchema);
+  //     updateColDefs(parsedSchema);
+  //   }
+
+  //   if (savedRowData) {
+  //     setRowDataState(JSON.parse(savedRowData));
+
+  //     console.log(JSON.parse(savedRowData));
+  //   }
+
+  //   if (savedColDefs) {
+  //     setColDefsState(JSON.parse(savedColDefs));
+  //   }
+  // }, []);
 
   const generateColDefs = (schemaArray: SchemaItem[]): ColDef[] => {
     return schemaArray
@@ -180,43 +208,65 @@ export const SchemaProvider: React.FC<{ children: ReactNode }> = ({
   const updateColDefs = (newSchema: Schema | null) => {
     if (!newSchema) {
       setColDefsState(null);
-      localStorage.removeItem(COL_DEFS_STORAGE_KEY);
+      //localStorage.removeItem(COL_DEFS_STORAGE_KEY);
       return;
     }
 
     const updatedColDefs = generateColDefs(newSchema);
     setColDefsState(updatedColDefs);
-    localStorage.setItem(COL_DEFS_STORAGE_KEY, JSON.stringify(updatedColDefs));
+    saveColDefsData(updatedColDefs);
+    //localStorage.setItem(COL_DEFS_STORAGE_KEY, JSON.stringify(updatedColDefs));
+  };
+
+  const updateSchemaData = async (newSchema: Schema | null) => {
+    // Update schema state and persist it using the data manager
+    setSchemaState(newSchema);
+    await saveSchemaData(newSchema);
+
+    // Update the column definitions based on the new schema
+    await updateColDefsData(newSchema);
   };
 
   // Save schema & update colDefs
   const setSchema = (newSchema: Schema | null) => {
     setSchemaState(newSchema);
     if (newSchema) {
-      localStorage.setItem(SCHEMA_STORAGE_KEY, JSON.stringify(newSchema));
+      saveSchemaData(newSchema);
       updateColDefs(newSchema);
     } else {
-      localStorage.removeItem(SCHEMA_STORAGE_KEY);
+      updateSchemaData(newSchema);
       setColDefsState(null);
     }
   };
 
   const setRowData = (data: any[] | null) => {
     setRowDataState(data);
-    if (data) localStorage.setItem(ROW_DATA_STORAGE_KEY, JSON.stringify(data));
-    else localStorage.removeItem(ROW_DATA_STORAGE_KEY);
+    if (data) saveRowData(data);
+    else {
+    } //localStorage.removeItem(ROW_DATA_STORAGE_KEY);
   };
 
   const setColDefs = (defs: ColDef[] | null) => {
     setColDefsState(defs);
-    if (defs) localStorage.setItem(COL_DEFS_STORAGE_KEY, JSON.stringify(defs));
-    else localStorage.removeItem(COL_DEFS_STORAGE_KEY);
+    if (defs) saveColDefsData(defs);
+    else {
+    } //localStorage.removeItem(COL_DEFS_STORAGE_KEY);
+  };
+
+  const updateColDefsData = async (newSchema: Schema | null) => {
+    if (!newSchema) {
+      setColDefsState(null);
+      await saveColDefsData(null);
+      return;
+    }
+
+    const updatedColDefs = generateColDefs(newSchema);
+    setColDefsState(updatedColDefs);
+    await saveColDefsData(updatedColDefs);
   };
 
   const clearLocalData = () => {
-    localStorage.removeItem(SCHEMA_STORAGE_KEY);
-    localStorage.removeItem(ROW_DATA_STORAGE_KEY);
-    localStorage.removeItem(COL_DEFS_STORAGE_KEY);
+    clearSavedLocalData(); //wipe out data through data manager
     setSchemaState(null);
     setRowDataState(null);
     setColDefsState(null);

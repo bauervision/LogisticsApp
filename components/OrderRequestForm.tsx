@@ -100,8 +100,8 @@ const OrderRequestForm = () => {
   // Logged in User field update: probably not needed in prod
   // ----------------------------
   useEffect(() => {
-    handleInputChange("Request Creator", user.name);
-    handleInputChange("Previous Approver", user.name);
+    handleInputChange("Request Creator", user?.Name);
+    handleInputChange("Previous Approver", user?.Name);
   }, [user]);
 
   // ----------------------------
@@ -270,12 +270,12 @@ const OrderRequestForm = () => {
 
       setFormValues((prev) => ({
         ...prev,
-        "Request Creator": user.name,
+        "Request Creator": user?.Name,
         "Request Workflow": workflowState.name,
         "Request Status": currentStatus,
         "Next Step Approver": nextApprover,
         "Next Step Approver Groups": firstStep.nextApproverGroups || [],
-        "Previous Approver": user.name,
+        "Previous Approver": user?.Name,
         "Request Created": getFormattedTodayDate("MM-DD-YYYY"),
       }));
 
