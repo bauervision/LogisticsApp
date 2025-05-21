@@ -437,30 +437,29 @@ const WorkflowComponent: React.FC = memo(() => {
             onClick={() => handleEditClick(item.id)}
             className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition"
           >
-            {user.role === AccessRole.USER ? "View" : "Edit"}
+            Edit
           </button>
-          {user.role !== AccessRole.USER && (
-            <>
-              <button
-                onClick={() => handleInsertAfter(item.id)}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition whitespace-nowrap"
-              >
-                Insert After
-              </button>
-              <button
-                onClick={() => handleDeleteStep(item.id)}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition whitespace-nowrap"
-              >
-                Delete Step
-              </button>
-              <button
-                onClick={() => handleRemoveAllBelow(item.id)}
-                className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition whitespace-nowrap"
-              >
-                Remove All Below
-              </button>
-            </>
-          )}
+
+          <>
+            <button
+              onClick={() => handleInsertAfter(item.id)}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition whitespace-nowrap"
+            >
+              Insert After
+            </button>
+            <button
+              onClick={() => handleDeleteStep(item.id)}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition whitespace-nowrap"
+            >
+              Delete Step
+            </button>
+            <button
+              onClick={() => handleRemoveAllBelow(item.id)}
+              className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition whitespace-nowrap"
+            >
+              Remove All Below
+            </button>
+          </>
         </div>
         {!isCollapsed && item.children.length > 0 && (
           <ul className="pl-5 list-disc">
@@ -481,9 +480,7 @@ const WorkflowComponent: React.FC = memo(() => {
           <DialogHeader>
             <DialogTitle>Edit Item</DialogTitle>
             <DialogDescription>
-              {user.role === AccessRole.USER
-                ? "Viewing details (read-only)"
-                : "Modify the details for this workflow item."}
+              Modify the details for this workflow item
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -495,12 +492,7 @@ const WorkflowComponent: React.FC = memo(() => {
               <input
                 type="text"
                 value={editData.name || ""}
-                onChange={
-                  user.role === AccessRole.USER
-                    ? undefined
-                    : (e) => handleEditChange("name", e.target.value)
-                }
-                disabled={user.role === AccessRole.USER}
+                onChange={(e) => handleEditChange("name", e.target.value)}
                 className="w-full border border-gray-300 rounded-lg p-2"
               />
             </div>
@@ -512,18 +504,15 @@ const WorkflowComponent: React.FC = memo(() => {
               </label>
               <select
                 value={editData.nextApprover || ""}
-                onChange={
-                  user.role === AccessRole.USER
-                    ? undefined
-                    : (e) => handleEditChange("nextApprover", e.target.value)
+                onChange={(e) =>
+                  handleEditChange("nextApprover", e.target.value)
                 }
-                disabled={user.role === AccessRole.USER}
                 className="w-full border border-gray-300 rounded-lg p-2"
               >
                 <option value="">Select Next Approver</option>
                 {users.map((u) => (
-                  <option key={u.name} value={u.name}>
-                    {u.name}
+                  <option key={u.Name} value={u.Name}>
+                    {u.Name}
                   </option>
                 ))}
               </select>
@@ -537,21 +526,16 @@ const WorkflowComponent: React.FC = memo(() => {
               <select
                 multiple
                 value={editData.nextApproverGroups || []}
-                onChange={
-                  user.role === AccessRole.USER
-                    ? undefined
-                    : (e) => {
-                        const options = e.target.options;
-                        const selected: string[] = [];
-                        for (let i = 0; i < options.length; i++) {
-                          if (options[i].selected) {
-                            selected.push(options[i].value);
-                          }
-                        }
-                        handleEditChange("nextApproverGroups", selected);
-                      }
-                }
-                disabled={user.role === AccessRole.USER}
+                onChange={(e) => {
+                  const options = e.target.options;
+                  const selected: string[] = [];
+                  for (let i = 0; i < options.length; i++) {
+                    if (options[i].selected) {
+                      selected.push(options[i].value);
+                    }
+                  }
+                  handleEditChange("nextApproverGroups", selected);
+                }}
                 className="w-full border border-gray-300 rounded-lg p-2 h-32"
               >
                 {groups.map((group) => (
@@ -571,13 +555,9 @@ const WorkflowComponent: React.FC = memo(() => {
                 <input
                   type="checkbox"
                   checked={editData.easyApproval ?? false}
-                  onChange={
-                    user.role === AccessRole.USER
-                      ? undefined
-                      : (e) =>
-                          handleEditChange("easyApproval", e.target.checked)
+                  onChange={(e) =>
+                    handleEditChange("easyApproval", e.target.checked)
                   }
-                  disabled={user.role === AccessRole.USER}
                 />
               </div>
               <span className="block text-xs text-gray-600 mt-1">
@@ -593,13 +573,10 @@ const WorkflowComponent: React.FC = memo(() => {
                   </label>
                   <select
                     value={editData.approverAction || ""}
-                    onChange={
-                      user.role === AccessRole.USER
-                        ? undefined
-                        : (e) =>
-                            handleEditChange("approverAction", e.target.value)
+                    onChange={(e) =>
+                      handleEditChange("approverAction", e.target.value)
                     }
-                    disabled={user.role === AccessRole.USER}
+                    //
                     className="w-full border border-gray-300 rounded-lg p-2"
                   >
                     <option value="">Select an Action</option>
@@ -617,13 +594,9 @@ const WorkflowComponent: React.FC = memo(() => {
                   <input
                     type="text"
                     value={editData.approverComment || ""}
-                    onChange={
-                      user.role === AccessRole.USER
-                        ? undefined
-                        : (e) =>
-                            handleEditChange("approverComment", e.target.value)
+                    onChange={(e) =>
+                      handleEditChange("approverComment", e.target.value)
                     }
-                    disabled={user.role === AccessRole.USER}
                     className="w-full border border-gray-300 rounded-lg p-2"
                     placeholder="Enter comment for the approver"
                   />
@@ -640,16 +613,12 @@ const WorkflowComponent: React.FC = memo(() => {
                 </label>
                 <select
                   value={editData.onApproval?.eventType || ""}
-                  onChange={
-                    user.role === AccessRole.USER
-                      ? undefined
-                      : (e) =>
-                          handleEditChange("onApproval", {
-                            ...editData.onApproval,
-                            eventType: e.target.value,
-                          })
+                  onChange={(e) =>
+                    handleEditChange("onApproval", {
+                      ...editData.onApproval,
+                      eventType: e.target.value,
+                    })
                   }
-                  disabled={user.role === AccessRole.USER}
                   className="w-full border border-gray-300 rounded-lg p-2"
                 >
                   <option value="">Select Event</option>
@@ -663,38 +632,31 @@ const WorkflowComponent: React.FC = memo(() => {
                       type="text"
                       placeholder="Enter comment"
                       value={editData.onApproval?.comment || ""}
-                      onChange={
-                        user.role === AccessRole.USER
-                          ? undefined
-                          : (e) =>
-                              handleEditChange("onApproval", {
-                                ...editData.onApproval,
-                                comment: e.target.value,
-                              })
+                      onChange={(e) =>
+                        handleEditChange("onApproval", {
+                          ...editData.onApproval,
+                          comment: e.target.value,
+                        })
                       }
-                      disabled={user.role === AccessRole.USER}
+                      //
                       className="w-full border border-gray-300 rounded-lg p-2 mt-2"
                     />
                     {editData.onApproval?.eventType ===
                       "Email Notification" && (
                       <select
                         value={editData.onApproval?.emailRecipient || ""}
-                        onChange={
-                          user.role === AccessRole.USER
-                            ? undefined
-                            : (e) =>
-                                handleEditChange("onApproval", {
-                                  ...editData.onApproval,
-                                  emailRecipient: e.target.value,
-                                })
+                        onChange={(e) =>
+                          handleEditChange("onApproval", {
+                            ...editData.onApproval,
+                            emailRecipient: e.target.value,
+                          })
                         }
-                        disabled={user.role === AccessRole.USER}
                         className="w-full border border-gray-300 rounded-lg p-2 mt-2"
                       >
                         <option value="">Select Recipient</option>
                         {users.map((u) => (
-                          <option key={u.name} value={u.name}>
-                            {u.name}
+                          <option key={u.Name} value={u.Name}>
+                            {u.Name}
                           </option>
                         ))}
                       </select>
@@ -710,16 +672,12 @@ const WorkflowComponent: React.FC = memo(() => {
                 </label>
                 <select
                   value={editData.onRejection?.eventType || ""}
-                  onChange={
-                    user.role === AccessRole.USER
-                      ? undefined
-                      : (e) =>
-                          handleEditChange("onRejection", {
-                            ...editData.onRejection,
-                            eventType: e.target.value,
-                          })
+                  onChange={(e) =>
+                    handleEditChange("onRejection", {
+                      ...editData.onRejection,
+                      eventType: e.target.value,
+                    })
                   }
-                  disabled={user.role === AccessRole.USER}
                   className="w-full border border-gray-300 rounded-lg p-2"
                 >
                   <option value="">Select Event</option>
@@ -733,38 +691,30 @@ const WorkflowComponent: React.FC = memo(() => {
                       type="text"
                       placeholder="Enter comment"
                       value={editData.onRejection?.comment || ""}
-                      onChange={
-                        user.role === AccessRole.USER
-                          ? undefined
-                          : (e) =>
-                              handleEditChange("onRejection", {
-                                ...editData.onRejection,
-                                comment: e.target.value,
-                              })
+                      onChange={(e) =>
+                        handleEditChange("onRejection", {
+                          ...editData.onRejection,
+                          comment: e.target.value,
+                        })
                       }
-                      disabled={user.role === AccessRole.USER}
                       className="w-full border border-gray-300 rounded-lg p-2 mt-2"
                     />
                     {editData.onRejection?.eventType ===
                       "Email Notification" && (
                       <select
                         value={editData.onRejection?.emailRecipient || ""}
-                        onChange={
-                          user.role === AccessRole.USER
-                            ? undefined
-                            : (e) =>
-                                handleEditChange("onRejection", {
-                                  ...editData.onRejection,
-                                  emailRecipient: e.target.value,
-                                })
+                        onChange={(e) =>
+                          handleEditChange("onRejection", {
+                            ...editData.onRejection,
+                            emailRecipient: e.target.value,
+                          })
                         }
-                        disabled={user.role === AccessRole.USER}
                         className="w-full border border-gray-300 rounded-lg p-2 mt-2"
                       >
                         <option value="">Select Recipient</option>
                         {users.map((u) => (
-                          <option key={u.name} value={u.name}>
-                            {u.name}
+                          <option key={u.Name} value={u.Name}>
+                            {u.Name}
                           </option>
                         ))}
                       </select>
@@ -775,29 +725,29 @@ const WorkflowComponent: React.FC = memo(() => {
             </div>
           </div>
           <DialogFooter>
-            {user.role === AccessRole.USER ? (
+            {/* {user.role === AccessRole.USER ? (
               <button
                 onClick={handleCancelEdit}
                 className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 transition"
               >
                 Close
               </button>
-            ) : (
-              <>
-                <button
-                  onClick={handleSaveEdit}
-                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={handleCancelEdit}
-                  className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 transition"
-                >
-                  Cancel
-                </button>
-              </>
-            )}
+            ) : ( */}
+            <>
+              <button
+                onClick={handleSaveEdit}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+              >
+                Save
+              </button>
+              <button
+                onClick={handleCancelEdit}
+                className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 transition"
+              >
+                Cancel
+              </button>
+            </>
+            {/* )} */}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -865,7 +815,7 @@ const WorkflowComponent: React.FC = memo(() => {
       </Dialog>
 
       {/* Restrict "Create New Workflow" based on user role */}
-      {user.role !== AccessRole.USER && !currentWorkflowName && (
+      {!currentWorkflowName && (
         <div>
           <h3 className="block text-lg font-medium text-gray-700 text-center pb-4">
             Create a New Workflow
@@ -967,36 +917,33 @@ const WorkflowComponent: React.FC = memo(() => {
 
             {/* Top Buttons */}
             <div className="flex space-x-2">
-              {user.role !== AccessRole.USER && (
-                <>
-                  {/* Hide Save button if Default Workflow is loaded */}
-                  {currentWorkflowName != "Default Workflow" && (
-                    <button
-                      onClick={handleSaveWorkflow}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
-                    >
-                      Save
-                    </button>
-                  )}
-                  {/* **** NEW: Save As Button **** */}
-                  <button
-                    onClick={handleOpenSaveAsDialog}
-                    className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition"
-                  >
-                    Save As
-                  </button>
-
-                  {/* Hide Delete Button if Default Workflow is loaded */}
-                  {currentWorkflowName != "Default Workflow" && (
-                    <button
-                      onClick={handleOpenDeleteDialog}
-                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </>
+              {/* Hide Save button if Default Workflow is loaded */}
+              {currentWorkflowName != "Default Workflow" && (
+                <button
+                  onClick={handleSaveWorkflow}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                >
+                  Save
+                </button>
               )}
+              {/* **** NEW: Save As Button **** */}
+              <button
+                onClick={handleOpenSaveAsDialog}
+                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition"
+              >
+                Save As
+              </button>
+
+              {/* Hide Delete Button if Default Workflow is loaded */}
+              {currentWorkflowName != "Default Workflow" && (
+                <button
+                  onClick={handleOpenDeleteDialog}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                >
+                  Delete
+                </button>
+              )}
+
               <button
                 onClick={handleUnloadWorkflow}
                 className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
@@ -1047,7 +994,7 @@ const WorkflowComponent: React.FC = memo(() => {
         </>
       )}
 
-      {user.role === AccessRole.USER && !currentWorkflowName && (
+      {!currentWorkflowName && (
         <p className="text-center text-gray-500">
           You do not have permission to create new workflows. Please select an
           existing workflow to view.
