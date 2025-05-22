@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // WorkflowComponent.tsx
 import React, { useState, useEffect, useRef, memo } from "react";
 import {
   Dialog,
-  DialogTrigger,
-  DialogContent,
+    DialogContent,
   DialogHeader,
   DialogFooter,
   DialogTitle,
@@ -14,15 +14,14 @@ import { useWorkflow } from "@/app/context/WorkflowContext";
 
 import { useUser } from "@/app/context/UserContext";
 import { useUserGroup } from "@/app/context/UserGroupContext";
-import { AccessRole } from "@/app/constants"; // Import USERS here
+
 import RequestToast, { showToast } from "../Requests/RequestToast";
 import { useUserManagement } from "@/app/context/UserManagementContext";
 
-const WorkflowComponent: React.FC = memo(() => {
+const WorkflowComponent: React.FC = memo(function WorkflowComponent() {
   const {
     state,
     dispatch,
-    addItem,
     saveWorkflow,
     deleteWorkflow,
     unloadWorkflow,
@@ -33,9 +32,9 @@ const WorkflowComponent: React.FC = memo(() => {
     getSavedWorkflows,
   } = useWorkflow();
 
-  const { user } = useUser();
+  useUser();
   const { groups } = useUserGroup();
-  const { users, addUser } = useUserManagement();
+  const { users } = useUserManagement();
   const [newItemName, setNewItemName] = useState<string>("");
   const [newWorkflowName, setNewWorkflowName] = useState<string>("");
   const [workflowKey, setWorkflowKey] = useState<string>("");
@@ -123,22 +122,7 @@ const WorkflowComponent: React.FC = memo(() => {
     setIsDeleteDialogOpen(false); // Close the dialog without deleting
   };
 
-  const handleAddItem = () => {
-    if (!newItemName.trim()) {
-      setTimeout(() => null, 500);
-      showToast("Item Requires a Name!", "error");
-      return;
-    }
-    console.log("handleAddItem called");
-    addItem(newItemName);
-    setNewItemName("");
-    setNeedsSave(true);
-  };
 
-  const handleTransition = (itemId: string, action: string) => {
-    dispatch({ type: "transition", itemId, action });
-    setNeedsSave(true); // State changed, might need saving
-  };
 
   const handleInsertAfter = (itemId: string) => {
     const newId = `item-${Date.now()}`;

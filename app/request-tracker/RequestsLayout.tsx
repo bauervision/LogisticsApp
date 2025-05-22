@@ -4,13 +4,13 @@ import FrequentLinks from "@/components/Requests/FrequentLinks";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
+    CardDescription,
+    CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import React, { ReactNode, useEffect, useState } from "react";
 import { useUser } from "../context/UserContext";
-import { AccessRole } from "../constants";
+
 
 type NewLayoutProps = {
   children: ReactNode;
@@ -30,10 +30,10 @@ const RequestsLayout: React.FC<NewLayoutProps> = ({
     setIsMounted(true);
   }, []);
 
-  // const userAccess =
-  //   user.role == AccessRole.SUPER_ADMIN || user.role == AccessRole.ADMIN
-  //     ? "You can VIEW, ADD, CHANGE, or DELETE Records here."
-  //     : " You can only VIEW records here.";
+  const userAccess =
+    user?.IsAdmin
+      ? "You can VIEW, ADD, CHANGE, or DELETE Records here."
+      : " You can only VIEW records here.";
 
   return (
     <div
@@ -54,7 +54,7 @@ const RequestsLayout: React.FC<NewLayoutProps> = ({
               <div>
                 <CardTitle className="text-2xl">{title}</CardTitle>
 
-                {/* <CardDescription>{userAccess}</CardDescription> */}
+                <CardDescription>{userAccess}</CardDescription>
               </div>
               {pageComponents && pageComponents.length > 0 && (
                 <div className="flex flex-row space-x-6 justify-between items-center">

@@ -6,13 +6,12 @@ import React, {
   useContext,
   ReactNode,
   useEffect,
-  useMemo,
 } from "react";
 import { User } from "../constants";
 
 type UserContextType = {
   user: User | null;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  setUser: (u: User | null) => void;
   setCurrentTenant: (tenant: string) => void;
 };
 
@@ -23,23 +22,39 @@ export const UserContext = createContext<UserContextType>({
 });
 
 const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const savedUser = sessionStorage.getItem("user");
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  const [user, setUserState] = useState<User | null>(null);
 
+  // Load from sessionStorage on client only
   useEffect(() => {
-    sessionStorage.setItem("user", JSON.stringify(user)), [user];
-    console.log("USer Context", user);
-  });
-  const userMemod = useMemo(() => ({ user, setUser }), [user, setUser]);
+    if (typeof window === "undefined") return;
+    const saved = sessionStorage.getItem("user");
+    if (saved) {
+      try {
+        setUserState(JSON.parse(saved));
+      } catch {
+        sessionStorage.removeItem("user");
+      }
+    }
+  }, []);
+
+  // Wrap setUser so we mirror state → sessionStorage
+  const setUser = (u: User | null) => {
+    if (typeof window !== "undefined") {
+      if (u) sessionStorage.setItem("user", JSON.stringify(u));
+      else sessionStorage.removeItem("user");
+    }
+    setUserState(u);
+  };
 
   const setCurrentTenant = (tenant: string) => {
     // Remove the prefix "TENANT_" before storing
     const strippedTenant = tenant.replace(/^TENANT_/, "");
-    setUser((prevUser) =>
-      prevUser ? { ...prevUser, CurrentTenant: strippedTenant } : prevUser
-    );
+    if (!user) return; // guard if no user yet
+    setUser({
+      // pass a User, not a function
+      ...user,
+      CurrentTenant: strippedTenant,
+    });
   };
 
   return (

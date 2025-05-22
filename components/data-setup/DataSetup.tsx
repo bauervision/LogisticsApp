@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { ColDef, SchemaItem } from "@/app/context/SchemaContext";
-import { SchemaContent } from "./SchemaContent";
+import React, { useState } from "react";
+import { SchemaItem } from "@/app/context/SchemaContext";
+
 import { CSVParser } from "./CSVParser";
-import { AGGrid } from "./AGGrid";
+
 import { useSchema } from "@/app/context/SchemaContext";
 import {
   DATE_FORMAT_OPTIONS,
@@ -26,15 +26,7 @@ import RequestToast, { showToast } from "../Requests/RequestToast";
 import GridTable from "../ag-grid-table/GridTable";
 
 const DataSetup: React.FC = () => {
-  const {
-    schema,
-    setSchema,
-    rowData,
-    setRowData,
-    colDefs,
-    setColDefs,
-    clearLocalData,
-  } = useSchema();
+  const { schema, setSchema, setRowData, setColDefs } = useSchema();
 
   const [mode, setMode] = useState<"csv" | "manual">("csv");
 
@@ -119,7 +111,7 @@ const DataSetup: React.FC = () => {
       <RequestToast />
       <header className="bg-white shadow p-6">
         <h2 className="text-2xl font-semibold text-center">
-          Catēna Data Configuration
+          Logistics Planet Data Configuration
         </h2>
 
         {/* Toggle Mode */}
@@ -149,9 +141,9 @@ const DataSetup: React.FC = () => {
             <section className="bg-white p-6 shadow rounded-lg">
               <h3 className="text-lg font-semibold mb-4">Define Schema</h3>
               <h4 className="text-sm mb-4">
-                These are default Catena Request fields and cannot be altered.
-                They are presented here for your awareness. Feel free to add any
-                custom fields in the Additional Details section.
+                These are default Logistics Planet request fields and cannot be
+                altered. They are presented here for your awareness. Feel free
+                to add any custom fields in the Additional Details section.
               </h4>
 
               {/* Fieldset for built‑in (read-only) fields */}

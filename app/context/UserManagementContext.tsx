@@ -1,13 +1,7 @@
 "use client";
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
-import { USERS, AccessRole, User } from "@/app/constants";
+import React, { createContext, useContext, useState, ReactNode } from "react";
+import { USERS, User } from "@/app/constants";
 
 interface UserManagementContextType {
   users: User[];
@@ -25,14 +19,13 @@ export const UserManagementProvider = ({
 }) => {
   // Load the initial state from localStorage or fallback to USERS constant.
   const [users, setUsers] = useState<User[]>(() => {
-    const stored = localStorage.getItem("users");
-    return stored ? JSON.parse(stored) : USERS;
+    return USERS;
   });
 
   // Save users to localStorage whenever the state changes.
-  useEffect(() => {
-    localStorage.setItem("users", JSON.stringify(users));
-  }, [users]);
+  // useEffect(() => {
+  //   localStorage.setItem("users", JSON.stringify(users));
+  // }, [users]);
 
   const addUser = (user: User) => {
     setUsers((prev) => [...prev, user]);

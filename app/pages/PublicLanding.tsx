@@ -1,8 +1,6 @@
 "use client";
 
 import PublicFooter from "@/components/PublicFooter";
-import PublicHeader from "@/components/PublicHeader";
-import { Button } from "@/components/ui/button";
 import React from "react";
 
 import ScrollingSections from "@/components/ScrollingSection";
@@ -12,9 +10,9 @@ import LoginDialog from "@/components/LoginDialog";
 const PublicLanding: React.FC = () => {
   return (
     <>
-      <main className="container mx-auto  bg-violet-900">
+      <main className="  bg-violet-900">
         <h1 className="text-5xl font-bold text-center p-4 text-white">
-          Welcome to Catēna
+          Welcome to Logistics Planet
         </h1>
         <LoginDialog />
         <ScrollingSections />

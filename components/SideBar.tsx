@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { GalleryVerticalEnd } from "lucide-react";
+import { EarthIcon } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -19,22 +19,14 @@ import {
   adminData,
   catalogData,
   inventoryData,
-  maintenanceData,
-  programManagementData,
-  tutorialData,
-} from "@/app/request-tracker/requestTrackerData";
+    programManagementData,
+ } from "@/app/request-tracker/requestTrackerData";
 import { handleLinkClick } from "@/app/utils/trackLinkClicks";
 import { useUser } from "@/app/context/UserContext";
-import { AccessRole } from "@/app/constants";
 
 const data = {
   navMain: [
-    {
-      title: "How To",
-      url: "#",
-      items: tutorialData,
-    },
-    {
+        {
       title: "Administration",
       url: "#",
       items: adminData,
@@ -67,7 +59,7 @@ export function SideBar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Filter out specific elements in adminData if the user role is not 'admin'
   const filteredAdminData =
-    user.role === AccessRole.ADMIN || user.role === AccessRole.SUPER_ADMIN
+    user?.IsAdmin 
       ? adminData
       : adminData.filter((item) => item.title === "Account Information");
 
@@ -91,10 +83,10 @@ export function SideBar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton size="lg" asChild>
               <a href="#" onClick={() => handleLinkClick("/request-tracker")}>
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <GalleryVerticalEnd className="size-8" />
+                  <EarthIcon className="size-8" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">Catena Request Tracker</span>
+                  <span className="font-semibold">Logistics Planet</span>
                   <span className="">v1.0.0</span>
                 </div>
               </a>

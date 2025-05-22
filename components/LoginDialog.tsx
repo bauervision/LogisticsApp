@@ -99,6 +99,28 @@ export default function LoginDialog() {
               Login in with PKI / CAC
             </Button>
           </DialogFooter>
+
+          {/* ———————————————————————————————— */}
+          {/* Instructional text for reviewers */}
+          <div className="mt-4 text-xs text-gray-600 space-y-1">
+            <p>
+              There are a total of 6 users available to login. Simply enter
+              their names as the username—no password is required.
+            </p>
+            <p>
+              <strong>Users:</strong> Kara Admin, Dan User, Matt User, Terry
+              User, John Guest.
+            </p>
+            <p>
+              The last name of each user represents their role access level so
+              you know exactly what type of user you’re choosing.
+            </p>
+            <p>
+              Choosing “Login in with PKI / CAC” will automatically log you in
+              as Jane Super, the super-admin account.
+            </p>
+          </div>
+          {/* ———————————————————————————————— */}
         </DialogContent>
       </Dialog>
     </div>

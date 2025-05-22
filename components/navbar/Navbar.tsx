@@ -3,7 +3,7 @@
 import { useUser } from "@/app/context/UserContext";
 import { Button } from "@/components/ui/button";
 import TenantDropdown from "../TenantDropdown";
-import { useRouter } from "next/compat/router";
+import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react"; // Import a logout icon
 
 function Navbar() {

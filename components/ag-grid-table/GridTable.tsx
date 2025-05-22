@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, {
   useMemo,
   useRef,
@@ -24,33 +25,33 @@ const workflowMapping: Record<string, string[]> = {
   // Add additional workflows here if needed.
 };
 
-const getWorkflowProgress = (row: any): string => {
-  // Prefer a workflow object if available; otherwise use the fields directly.
-  const workflowName = row.workflow?.name || row["Request Workflow"];
-  const currentStep = row.workflow?.currentStep || row["Request Status"];
+// const getWorkflowProgress = (row: any): string => {
+//   // Prefer a workflow object if available; otherwise use the fields directly.
+//   const workflowName = row.workflow?.name || row["Request Workflow"];
+//   const currentStep = row.workflow?.currentStep || row["Request Status"];
 
-  // Try to get the ordered steps from the row.
-  const steps: string[] =
-    (row.workflow && row.workflow.orderedSteps) ||
-    // fallback to a default mapping if needed
-    workflowMapping[workflowName] ||
-    [];
+//   // Try to get the ordered steps from the row.
+//   const steps: string[] =
+//     (row.workflow && row.workflow.orderedSteps) ||
+//     // fallback to a default mapping if needed
+//     workflowMapping[workflowName] ||
+//     [];
 
-  if (steps.length > 0) {
-    const totalSteps = steps.length;
-    const currentIndex = steps.findIndex((step) => step === currentStep);
-    if (currentIndex === -1) return workflowName;
-    // Force 100% if at the last step.
-    if (currentIndex === totalSteps - 1) return `${workflowName}: 100%`;
-    const progressPercent = Math.round((currentIndex / totalSteps) * 100);
-    return `${workflowName}: ${progressPercent}%`;
-  }
-  return workflowName || "";
-};
+//   if (steps.length > 0) {
+//     const totalSteps = steps.length;
+//     const currentIndex = steps.findIndex((step) => step === currentStep);
+//     if (currentIndex === -1) return workflowName;
+//     // Force 100% if at the last step.
+//     if (currentIndex === totalSteps - 1) return `${workflowName}: 100%`;
+//     const progressPercent = Math.round((currentIndex / totalSteps) * 100);
+//     return `${workflowName}: ${progressPercent}%`;
+//   }
+//   return workflowName || "";
+// };
 
-const requestWorkflowCellRenderer = (params: any) => {
-  return <span>{getWorkflowProgress(params.data)}</span>;
-};
+// const requestWorkflowCellRenderer = (params: any) => {
+//   return <span>{getWorkflowProgress(params.data)}</span>;
+// };
 
 // Define rowClassRules to apply a CSS class when the request is complete.
 const rowClassRules = {

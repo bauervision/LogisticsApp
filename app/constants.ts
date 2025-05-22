@@ -1,5 +1,5 @@
 import { RequestItem } from "./context/SchemaContext";
-import { WorkflowItemState, WorkflowState } from "./context/WorkflowContext";
+import { WorkflowState } from "./context/WorkflowContext";
 
 export const FIELD_TYPES = {
   TEXT: "text",
@@ -388,8 +388,8 @@ export const USERS: User[] = [
     AcceptedTerms: true,
     LoggingOut: false,
     Tenants: ["TENANT_CHS", "TENANT_F16", "TENANT_DEMO", "TENANT_PACMAN"],
-    IsAdmin: false,
-    CurrentTenant: "",
+    IsAdmin: true,
+    CurrentTenant: "CHS",
   },
   {
     Name: "Kara Admin",
@@ -397,7 +397,7 @@ export const USERS: User[] = [
     AcceptedTerms: true,
     LoggingOut: false,
     Tenants: ["TENANT_CHS", "TENANT_F16"],
-    IsAdmin: false,
+    IsAdmin: true,
     CurrentTenant: "",
   },
   {

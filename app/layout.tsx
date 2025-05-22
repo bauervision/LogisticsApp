@@ -10,7 +10,6 @@ import { SideBar } from "@/components/SideBar";
 import { UserProvider } from "./context/UserContext";
 import { WorkflowProvider } from "./context/WorkflowContext";
 import { SchemaProvider } from "./context/SchemaContext";
-import { AccessRole } from "./constants";
 import { UserManagementProvider } from "./context/UserManagementContext";
 import { UserGroupProvider } from "./context/UserGroupContext";
 
@@ -26,7 +25,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Catena",
+  title: "Logistics Planet",
   description: "Next Generation Integrated Logistics Platform",
 };
 

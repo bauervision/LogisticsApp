@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -215,7 +216,7 @@ const TaskSheet: React.FC = () => {
   };
 
   return (
-    <div className="pb-2">
+    <div className="">
       <RequestToast />
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild>
