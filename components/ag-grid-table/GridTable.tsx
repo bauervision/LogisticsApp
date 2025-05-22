@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
+
 import React, {
   useMemo,
   useRef,
@@ -109,6 +111,8 @@ const GridTable = () => {
     }
   }, [colDefs, columnApi, gridApi]);
 
+  console.log("🟢 colDefs:", colDefs);
+  console.log("🟢 rowData:", rowData);
   return (
     <div
       className="ag-theme-quartz mx-auto"
@@ -124,7 +128,7 @@ const GridTable = () => {
         </div>
       ) : (
         <AgGridReact
-          rowData={rowData}
+          rowData={rowData ?? []}
           columnDefs={colDefs}
           defaultColDef={defaultColDef}
           rowSelection="single"

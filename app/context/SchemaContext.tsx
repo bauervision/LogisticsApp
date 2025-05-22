@@ -10,7 +10,7 @@ import React, {
   useEffect,
 } from "react";
 import { useWorkflow } from "@/app/context/WorkflowContext";
-import { FIELD_TYPES } from "../constants";
+import { FIELD_TYPES, DEFAULT_ROW_DATA } from "../constants";
 import {
   clearSavedLocalData,
   getColDefsData,
@@ -63,7 +63,6 @@ export interface SchemaContextType {
   setRowData: (data: any[] | null) => void;
   colDefs: ColDef[] | null;
   setColDefs: (defs: ColDef[] | null) => void;
-  clearLocalData: () => void;
   getRequestStatus: (workflowName: string) => number | null;
 }
 
@@ -73,7 +72,7 @@ export const SchemaProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [schema, setSchemaState] = useState<Schema | null>(null);
-  const [rowData, setRowDataState] = useState<any[] | null>(null);
+  const [rowData, setRowDataState] = useState<any[]>(DEFAULT_ROW_DATA);
   const [colDefs, setColDefsState] = useState<ColDef[] | null>(null);
 
   const { state: workflowState, currentWorkflowName } = useWorkflow();
@@ -89,9 +88,13 @@ export const SchemaProvider: React.FC<{ children: ReactNode }> = ({
       }
 
       const storedRowData = await getRowData();
-      if (storedRowData) {
+      if (Array.isArray(storedRowData) && storedRowData.length > 0) {
+        // we have saved rows → use them
         setRowDataState(storedRowData);
-        // console.log(storedRowData);
+      } else {
+        // no saved rows (or empty) → seed with dummy and persist
+        setRowDataState(DEFAULT_ROW_DATA);
+        await saveRowData(DEFAULT_ROW_DATA);
       }
 
       const storedColDefs = await getColDefsData();
@@ -100,29 +103,6 @@ export const SchemaProvider: React.FC<{ children: ReactNode }> = ({
       }
     })();
   }, []);
-
-  // Load saved data from localStorage on mount
-  // useEffect(() => {
-  //   const savedSchema = localStorage.getItem(SCHEMA_STORAGE_KEY);
-  //   const savedRowData = localStorage.getItem(ROW_DATA_STORAGE_KEY);
-  //   const savedColDefs = localStorage.getItem(COL_DEFS_STORAGE_KEY);
-
-  //   if (savedSchema) {
-  //     const parsedSchema = JSON.parse(savedSchema);
-  //     setSchemaState(parsedSchema);
-  //     updateColDefs(parsedSchema);
-  //   }
-
-  //   if (savedRowData) {
-  //     setRowDataState(JSON.parse(savedRowData));
-
-  //     console.log(JSON.parse(savedRowData));
-  //   }
-
-  //   if (savedColDefs) {
-  //     setColDefsState(JSON.parse(savedColDefs));
-  //   }
-  // }, []);
 
   const generateColDefs = (schemaArray: SchemaItem[]): ColDef[] => {
     return schemaArray
@@ -241,11 +221,15 @@ export const SchemaProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  const setRowData = (data: any[] | null) => {
-    setRowDataState(data);
-    if (data) saveRowData(data);
-    else {
-    } //localStorage.removeItem(ROW_DATA_STORAGE_KEY);
+  const setRowData = (r: any[] | null) => {
+    if (r) {
+      setRowDataState(r);
+      saveRowData(r);
+    } else {
+      // decide what you want here if r is null—maybe clear to an empty array?
+      setRowDataState([]);
+      saveRowData([]);
+    }
   };
 
   const setColDefs = (defs: ColDef[] | null) => {
@@ -265,14 +249,6 @@ export const SchemaProvider: React.FC<{ children: ReactNode }> = ({
     const updatedColDefs = generateColDefs(newSchema);
     setColDefsState(updatedColDefs);
     await saveColDefsData(updatedColDefs);
-  };
-
-  const clearLocalData = () => {
-    clearSavedLocalData(); //wipe out data through data manager
-    setSchemaState(null);
-    setRowDataState(null);
-    setColDefsState(null);
-    console.log("Local data cleared.");
   };
 
   // Dynamically fetch the Request Status from the workflow
@@ -321,7 +297,6 @@ export const SchemaProvider: React.FC<{ children: ReactNode }> = ({
         setRowData,
         colDefs,
         setColDefs,
-        clearLocalData,
         getRequestStatus,
       }}
     >
