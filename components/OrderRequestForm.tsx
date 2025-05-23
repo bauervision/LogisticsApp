@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -29,6 +31,7 @@ import {
   SHIPPING_FIELDS,
   PRODUCTS,
   US_STATES,
+  DEFAULT_WORKFLOW,
 } from "@/app/constants";
 import {
   DropdownMenu,
@@ -44,7 +47,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useUserManagement } from "@/app/context/UserManagementContext";
 
 // Date formats mapping.
 const DATE_FORMATS: { [key: string]: string } = {
@@ -63,7 +65,6 @@ export interface RequestItem {
 }
 
 const OrderRequestForm = () => {
-  const { users, addUser } = useUserManagement();
   const { schema, rowData } = useSchema();
   const {
     state: workflowState,
@@ -95,6 +96,23 @@ const OrderRequestForm = () => {
       acc + (item.price || 0) * (item.amount || 0),
     0
   );
+
+  useEffect(() => {
+    if (!currentWorkflowName) {
+      const defaultName = DEFAULT_WORKFLOW.name;
+      // 1) register it in the context
+      dispatch({ type: "loadWorkflow", workflowState: DEFAULT_WORKFLOW });
+      // 2) set the “current” name so your SelectValue shows it
+      setCurrentWorkflowName(defaultName);
+      // 3) (optional) persist it if you want it in savedWorkflows
+      if (!savedWorkflows.includes(defaultName)) {
+        localStorage.setItem(
+          `workflow_${defaultName}`,
+          JSON.stringify(DEFAULT_WORKFLOW)
+        );
+      }
+    }
+  }, []); // run once
 
   // ----------------------------
   // Logged in User field update: probably not needed in prod
@@ -248,17 +266,6 @@ const OrderRequestForm = () => {
     setFormValues((prev) => ({ ...prev, Documents: updatedDocs }));
     setIsDocRemoveDialogOpen(false);
     setDocToRemove(null);
-  };
-
-  // ----------------------------
-  // Existing Documents handler (if needed)
-  // ----------------------------
-  const handleDocuments = (
-    id: string,
-    key: keyof SchemaItem,
-    value: string | boolean | string[]
-  ) => {
-    setFormValues((prev) => ({ ...prev, Documents: value }));
   };
 
   useEffect(() => {

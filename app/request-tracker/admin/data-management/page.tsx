@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import RequestsLayout from "../../RequestsLayout";
 import DataSetup from "@/components/data-setup/DataSetup";

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import React, {
@@ -9,7 +10,7 @@ import React, {
   useState,
   useEffect,
 } from "react";
-import workflow from "../workflow-engine/workflow";
+
 import { DEFAULT_WORKFLOW } from "../constants";
 
 export interface WorkflowItemState {
@@ -295,7 +296,7 @@ const workflowReducer = (
 };
 
 export const WorkflowProvider = ({ children }: { children: ReactNode }) => {
-  const [state, dispatch] = useReducer(workflowReducer, initialState);
+  const [state, dispatch] = useReducer(workflowReducer, DEFAULT_WORKFLOW);
   const [loading, setLoading] = useState(true);
   const [savedWorkflows, setSavedWorkflows] = useState<string[]>([]);
   const [currentWorkflowName, setCurrentWorkflowName] = useState<string>("");

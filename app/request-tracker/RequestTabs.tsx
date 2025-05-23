@@ -1,3 +1,7 @@
+/* eslint-disable react-hooks/rules-of-hooks */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
 import { Button } from "@/components/ui/button";
 import { useWorkflow } from "@/app/context/WorkflowContext";
 import {
@@ -65,7 +69,6 @@ export function RequestTabs() {
   const [reportFile, setReportFile] = useState<File | null>(null);
   const [certified, setCertified] = useState(false);
 
-  const [isDocDialogOpen, setIsDocDialogOpen] = useState(false);
   // ----- NEW: Documents state -----
   // We'll assume the request stores documents as an array of objects.
   const [docs, setDocs] = useState<DocumentData[]>(
@@ -101,9 +104,6 @@ export function RequestTabs() {
       setDocs(selectedRow?.["Documents"] || []);
     }
   }, [selectedRow]);
-
-  // Get the documents array from the request (or an empty array if none).
-  const documents: string[] = selectedRow?.["Documents"] || [];
 
   // File upload handler (same as in TaskSheet)
   const handleReportUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -284,9 +284,7 @@ export function RequestTabs() {
   };
 
   // Evaluate if the user has access to delete a request.
-  const canDelete =
-    user &&
-    (user.role === AccessRole.SUPER_ADMIN || user.role === AccessRole.ADMIN);
+  const canDelete = user && user.IsAdmin;
 
   const handleSubmitAction = () => {
     if (!comment.trim()) {
@@ -295,7 +293,7 @@ export function RequestTabs() {
     }
 
     const timestamp = new Date().toLocaleString();
-    const formattedComment = `[${selectedRow.workflow.currentStep}] "${comment}" - ${user.name} ${timestamp}`;
+    const formattedComment = `[${selectedRow.workflow.currentStep}] "${comment}" - ${user?.Name} ${timestamp}`;
 
     // Copy current request
     let updatedRequest = { ...selectedRow };
@@ -325,7 +323,7 @@ export function RequestTabs() {
             },
             "Next Step Approver": nextItem.nextApprover || "",
             "Next Step Approver Groups": nextItem.nextApproverGroups || [],
-            "Previous Approver": user.name,
+            "Previous Approver": user?.Name,
             "Request Status": nextItem.name,
           };
           showToast(
@@ -366,7 +364,7 @@ export function RequestTabs() {
         "Next Step Approver": selectedRow["Previous Approver"],
         "Next Step Approver Groups":
           selectedRow["Previous Approver Groups"] || [],
-        "Previous Approver": user.name,
+        "Previous Approver": user?.Name,
         "Request Status": parentWorkflowItem.name,
       };
       showToast(
@@ -400,14 +398,14 @@ export function RequestTabs() {
   // Combine access level with the designated step.
   const canEditRequestStep = useMemo(() => {
     // Super Admins can edit regardless of the current step.
-    if (user.role === AccessRole.SUPER_ADMIN) {
+    if (user?.IsAdmin) {
       return true;
     }
     // For other users, only allow editing if they are the designated nextApprover.
     // Optionally, you could also check that the request is currently at the step where approval is expected.
     const currentStep =
       selectedRow.workflow?.currentStep || selectedRow["Request Status"];
-    return selectedRow["Next Step Approver"] === user.name;
+    return selectedRow["Next Step Approver"] === user?.Name;
   }, [user, selectedRow]);
 
   return (

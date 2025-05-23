@@ -88,7 +88,7 @@ export default function LoginDialog() {
             />
             {error && <p className="text-red-500 text-sm">{error}</p>}
           </div>
-          <DialogFooter className="flex flex-col space-y-2">
+          <DialogFooter className="flex flex-col ">
             <Button
               onClick={handleLogin}
               className="bg-violet-600 text-white shadow-lg hover:bg-violet-500 transition"

@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
 import React, { useEffect, useMemo } from "react";
 import { useSchema, SchemaItem } from "@/app/context/SchemaContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUser } from "../context/UserContext";
-import { AccessRole } from "../constants";
 
 interface OrderFormProps {
   order: { [key: string]: any };
@@ -105,15 +106,14 @@ const OrderForm: React.FC<OrderFormProps> = ({ order, onFieldChange }) => {
   };
 
   // Combine access level with the designated step.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const canEditRequestStep = useMemo(() => {
     // Super Admins can edit regardless of the current step.
-    if (user.role === AccessRole.SUPER_ADMIN) {
+    if (user?.IsAdmin) {
       return true;
     }
-    // For other users, only allow editing if they are the designated nextApprover.
-    // Optionally, you could also check that the request is currently at the step where approval is expected.
-    const currentStep = order.workflow?.currentStep || order["Request Status"];
-    return order["Next Step Approver"] === user.name;
+
+    return order["Next Step Approver"] === user?.Name;
   }, [user, order]);
 
   return (

@@ -10,9 +10,13 @@ import React, {
   useEffect,
 } from "react";
 import { useWorkflow } from "@/app/context/WorkflowContext";
-import { FIELD_TYPES, DEFAULT_ROW_DATA } from "../constants";
 import {
-  clearSavedLocalData,
+  FIELD_TYPES,
+  DEFAULT_ROW_DATA,
+  SHIPPING_FIELDS,
+  PRESET_FIELDS,
+} from "../constants";
+import {
   getColDefsData,
   getRowData,
   getSchemaData,
@@ -71,7 +75,10 @@ const SchemaContext = createContext<SchemaContextType | undefined>(undefined);
 export const SchemaProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [schema, setSchemaState] = useState<Schema | null>(null);
+  const [schema, setSchemaState] = useState<Schema | null>([
+    ...PRESET_FIELDS,
+    ...SHIPPING_FIELDS,
+  ]);
   const [rowData, setRowDataState] = useState<any[]>(DEFAULT_ROW_DATA);
   const [colDefs, setColDefsState] = useState<ColDef[] | null>(null);
 

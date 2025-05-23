@@ -2,13 +2,16 @@
 "use client";
 
 import GridTable from "@/components/ag-grid-table/GridTable";
-
+import dynamic from "next/dynamic";
 import React from "react";
 
 import { useRequestContext } from "../context/DataContext";
 
 import RequestsLayout from "./RequestsLayout";
-import TaskSheet from "@/components/TaskSheet";
+const TaskSheet = dynamic(() => import("@/components/TaskSheet"), {
+  ssr: false,
+});
+
 import { Button } from "@/components/ui/button";
 import { handleLinkClick } from "../utils/trackLinkClicks";
 import Link from "next/link";
